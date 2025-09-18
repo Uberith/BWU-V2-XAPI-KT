@@ -4,7 +4,7 @@
 [![JVM Target](https://img.shields.io/badge/JVM-24-green.svg)](https://openjdk.java.net/)
 [![Version](https://img.shields.io/badge/version-0.1--SNAPSHOT-orange.svg)](https://github.com/botwithus/kxapi)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Lines of Code](https://img.shields.io/badge/lines%20of%20code-1,200+-brightgreen.svg)](https://github.com/botwithus/kxapi)
+[![Lines of Code](https://img.shields.io/endpoint?url=https://ghloc.vercel.app/api/BotWithUs/BWU-V2-XAPI-KT/badge&color=blueviolet&label=Lines%20of%20Code)](https://github.com/BotWithUs/BWU-V2-XAPI-KT)
 
 A powerful and intuitive Kotlin DSL for building ImGui-based user interfaces in BotWithUs RuneScape 3 bot development. KXAPI provides a fluent, type-safe interface that makes UI development clean, readable, and maintainable.
 
@@ -81,13 +81,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Issues**: [GitHub Issues](https://github.com/BotWithUs/BWU-V2-XAPI-KT/issues)
 - **BotWithUs**: [Official Website](https://botwithus.net)
 - **Documentation**: [Wiki](https://github.com/BotWithUs/BWU-V2-XAPI-KT/wiki)
-
-## 📊 Project Stats
-
-- **Total Lines**: 1,200+
-- **Components**: 15+ UI builders
-- **Test Coverage**: 90%+
-- **Documentation**: Comprehensive
 
 ---
 
