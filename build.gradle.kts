@@ -13,6 +13,11 @@ kotlin {
     jvmToolchain(24)
 }
 
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_24)
@@ -46,6 +51,8 @@ dependencies {
 
 publishing {
     repositories {
+        mavenLocal()
+
         maven {
             url = if (version.toString().endsWith("SNAPSHOT")) {
                 uri("https://nexus.botwithus.net/repository/maven-snapshots/")

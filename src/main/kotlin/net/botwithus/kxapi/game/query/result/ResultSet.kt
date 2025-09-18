@@ -38,3 +38,5 @@ fun ResultSet<SceneObject>.nearest(): SceneObject? = nearestBy { Distance.to(it)
 
 fun ResultSet<PathingEntity>.nearest(): PathingEntity? = nearestBy { Distance.to(it) }
 
+fun ResultSet<GroundItem>.nearest(): GroundItem? = nearestBy { Distance.to(it.stack.coordinate) }
+
