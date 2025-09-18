@@ -3,8 +3,11 @@ package net.botwithus.kxapi.game.query
 
 import net.botwithus.kxapi.game.query.base.Query
 import net.botwithus.kxapi.game.query.result.ResultSet
+import net.botwithus.kxapi.game.query.result.nearest
+import net.botwithus.kxapi.game.query.util.StringMatchers
 import net.botwithus.rs3.cache.assets.so.SceneObjectDefinition
 import net.botwithus.rs3.entities.SceneObject
+import net.botwithus.rs3.world.Distance
 import net.botwithus.rs3.world.World
 import java.util.Arrays
 import java.util.function.BiFunction
@@ -12,15 +15,27 @@ import java.util.function.Predicate
 import java.util.regex.Pattern
 
 /**
- * SceneObject query aligned with XAPI-style queries.
- * - Backed by World.getSceneObjects()
- * - Returns ResultSet<SceneObject> so extensions like ResultSet.nearest() work
+ * Fluent query builder for [SceneObject] instances backed by [World.getSceneObjects].
+ *
+ * Each filtering call appends to the internal predicate, so you can keep chaining
+ * until you are ready to materialise the result set. The most common pattern is:
+ *
+ * ```kotlin
+ * val altar = SceneObjectQuery.newQuery()
+ *     .withName("Chaos altar")
+ *     .hidden(false)
+ *     .within(8.0)
+ *     .nearestOrNull()
+ * ```
+ *
+ * You can also iterate the query directly: `for (obj in SceneObjectQuery.newQuery().typeId(1234)) { ... }`.
  */
 class SceneObjectQuery : Query<SceneObject> {
 
     private var root: Predicate<SceneObject> = Predicate { true }
 
     companion object {
+        /** Convenience factory that mirrors the Java-facing `SceneObjectQuery.newQuery()` helper. */
         @JvmStatic
         fun newQuery(): SceneObjectQuery = SceneObjectQuery()
     }
@@ -35,7 +50,10 @@ class SceneObjectQuery : Query<SceneObject> {
 
     override fun test(sceneObject: SceneObject): Boolean = root.test(sceneObject)
 
-    /** Filters by one or more type ids. No-op when empty. */
+    /**
+     * Restricts the query to objects whose `typeId` matches any of the provided ids.
+     * Use it when you know the definition id rather than the display name.
+     */
     fun typeId(vararg typeIds: Int): SceneObjectQuery {
         if (typeIds.isEmpty()) return this
         val set = typeIds.toSet()
@@ -44,7 +62,10 @@ class SceneObjectQuery : Query<SceneObject> {
         return this
     }
 
-    /** Filters by one or more animation ids. No-op when empty. */
+    /**
+     * Filters scene objects by their current animation ids. Useful for detecting
+     * state changes (e.g. whether a door is currently animating).
+     */
     fun animation(vararg animations: Int): SceneObjectQuery {
         if (animations.isEmpty()) return this
         val set = animations.toSet()
@@ -53,14 +74,20 @@ class SceneObjectQuery : Query<SceneObject> {
         return this
     }
 
-    /** Filters by hidden flag. Use hidden(false) for visible objects. */
+    /**
+     * Matches objects whose visibility aligns with [hidden]. Passing `false` keeps
+     * only visible objects, whereas `true` selects entities hidden from the scene.
+     */
     fun hidden(hidden: Boolean): SceneObjectQuery {
         val prev = root
         root = Predicate { t -> prev.test(t) && t.isHidden == hidden }
         return this
     }
 
-    /** Filters by multi-type (definition). No-op when empty. */
+    /**
+     * Limits the query to objects backed by one of the supplied multi-type definitions.
+     * Combine it with [typeId] when you need to honour multi-variant objects.
+     */
     fun multiType(vararg sceneObjectDefinitions: SceneObjectDefinition): SceneObjectQuery {
         if (sceneObjectDefinitions.isEmpty()) return this
         val defs = sceneObjectDefinitions.toSet()
@@ -69,7 +96,18 @@ class SceneObjectQuery : Query<SceneObject> {
         return this
     }
 
-    /** Filters by name using a custom predicate. No-op when empty. */
+    /** Constrains the results to scene objects within [distance] tiles of the local player. */
+    infix fun within(distance: Double): SceneObjectQuery {
+        val prev = root
+        root = Predicate { t -> prev.test(t) && Distance.to(t) <= distance }
+        return this
+    }
+
+    /**
+     * Applies a custom string comparison against each object name. Supply the same
+     * `BiFunction` that the Java XAPI exposes (e.g. case-insensitive matchers).
+     * When [names] is empty the call is ignored.
+     */
     fun name(spred: BiFunction<String, CharSequence, Boolean>, vararg names: String): SceneObjectQuery {
         if (names.isEmpty()) return this
         val prev = root
@@ -80,10 +118,25 @@ class SceneObjectQuery : Query<SceneObject> {
         return this
     }
 
-    /** Filters by exact name using String.contentEquals semantics. */
+    /**
+     * Convenience overload that matches objects whose displayed name equals any of
+     * the provided [names] (case-sensitive).
+     */
     fun name(vararg names: String): SceneObjectQuery = name(BiFunction { a, b -> a.contentEquals(b) }, *names)
 
-    /** Filters by regex Patterns (full match). No-op when empty. */
+    /** Case-insensitive exact name comparison. */
+    fun nameEqualsIgnoreCase(vararg names: String): SceneObjectQuery = name(StringMatchers.equalsIgnoreCase, *names)
+
+    /** Keeps objects whose name contains any of the [fragments] (case-sensitive). */
+    fun nameContains(vararg fragments: String): SceneObjectQuery = name(StringMatchers.contains, *fragments)
+
+    /** Case-insensitive containment check for object names. */
+    fun nameContainsIgnoreCase(vararg fragments: String): SceneObjectQuery = name(StringMatchers.containsIgnoreCase, *fragments)
+
+    /**
+     * Filters by name using regular expressions. Each pattern must fully match the
+     * object name; use `.*` wildcards if you only need a partial match.
+     */
     fun name(vararg patterns: Pattern): SceneObjectQuery {
         if (patterns.isEmpty()) return this
         val prev = root
@@ -94,7 +147,10 @@ class SceneObjectQuery : Query<SceneObject> {
         return this
     }
 
-    /** Filters by options using a custom predicate. No-op when empty. */
+    /**
+     * Applies a custom comparison against every interaction option shown on the
+     * object. Handy for fuzzy matches such as startsWith or case-insensitive checks.
+     */
     fun option(spred: BiFunction<String, CharSequence, Boolean>, vararg options: String): SceneObjectQuery {
         if (options.isEmpty()) return this
         val prev = root
@@ -107,10 +163,22 @@ class SceneObjectQuery : Query<SceneObject> {
         return this
     }
 
-    /** Filters by options using String.contentEquals semantics. */
+    /** Matches objects containing any of the provided option strings (case-sensitive). */
     fun option(vararg option: String): SceneObjectQuery = option(BiFunction { a, b -> a.contentEquals(b) }, *option)
 
-    /** Filters by options using regex Patterns. No-op when empty. */
+    /** Keeps objects exposing an option that equals any value, ignoring case differences. */
+    fun optionEqualsIgnoreCase(vararg options: String): SceneObjectQuery = option(StringMatchers.equalsIgnoreCase, *options)
+
+    /** Filters objects whose options contain any fragment (case-sensitive). */
+    fun optionContains(vararg fragments: String): SceneObjectQuery = option(StringMatchers.contains, *fragments)
+
+    /** Case-insensitive containment for option strings. */
+    fun optionContainsIgnoreCase(vararg fragments: String): SceneObjectQuery = option(StringMatchers.containsIgnoreCase, *fragments)
+
+    /**
+     * Keeps objects that expose an option matching any of the supplied regular expressions.
+     * The regex must match the entire option string.
+     */
     fun option(vararg patterns: Pattern): SceneObjectQuery {
         if (patterns.isEmpty()) return this
         val prev = root
@@ -123,3 +191,13 @@ class SceneObjectQuery : Query<SceneObject> {
         return this
     }
 }
+
+/** Materialises the query and returns the nearest matching scene object, or null. */
+fun SceneObjectQuery.nearestOrNull(): SceneObject? = results().nearest()
+
+/** Fluent alias so chains read as `query withName "Banker"`. */
+infix fun SceneObjectQuery.withName(name: String): SceneObjectQuery = this.name(name)
+
+/** Alias for [SceneObjectQuery.option] that reads as `query withOption "Chop down"`. */
+infix fun SceneObjectQuery.withOption(option: String): SceneObjectQuery = this.option(option)
+

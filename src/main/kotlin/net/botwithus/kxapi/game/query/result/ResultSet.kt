@@ -3,6 +3,7 @@ package net.botwithus.kxapi.game.query.result
 import java.util.stream.Stream
 import net.botwithus.rs3.entities.PathingEntity
 import net.botwithus.rs3.entities.SceneObject
+import net.botwithus.rs3.item.GroundItem
 import net.botwithus.rs3.world.Distance
 import java.util.Collection
 
