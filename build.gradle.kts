@@ -39,6 +39,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("net.botwithus.xapi:xapi:2.0.+")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     // Logging
     implementation("org.slf4j:slf4j-api:2.0.9")
 }
