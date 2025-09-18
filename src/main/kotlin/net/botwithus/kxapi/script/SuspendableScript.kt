@@ -61,12 +61,14 @@ abstract class SuspendableScript : Script() {
     private val pendingDispatches: ArrayDeque<Runnable> = ArrayDeque()
     private val pendingWaits = mutableListOf<WaitRequest>()
 
+    /** Dispatches coroutine work onto the single-threaded tick queue so jobs run in lockstep with the script. */
     private val scriptDispatcher = object : CoroutineDispatcher() {
         override fun dispatch(context: CoroutineContext, block: Runnable) {
             pendingDispatches.addLast(block)
         }
     }
 
+    /** Captures uncaught coroutine exceptions and routes them through [handleCoroutineFailure]. */
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         handleCoroutineFailure(throwable)
     }
@@ -87,6 +89,7 @@ abstract class SuspendableScript : Script() {
             return internalScope
         }
 
+    /** Primary coroutine executing [onLoop]; recreated if it completes or the script restarts. */
     private var mainJob: Job? = null
 
     @Volatile
@@ -260,6 +263,7 @@ abstract class SuspendableScript : Script() {
         scopeJob.cancel(cause)
     }
 
+    /** Cooperative main loop that calls [onLoop] and yields once per tick. */
     private val coroutineBlock: suspend CoroutineScope.() -> Unit = {
         while (isActive) {
             onLoop()
@@ -267,15 +271,18 @@ abstract class SuspendableScript : Script() {
         }
     }
 
+    /** Recreates the coroutine scope if it was cancelled so new work can be scheduled. */
     private fun ensureScopeActive() {
         scriptScope // getter reinitialises if needed
     }
 
+    /** Lazily starts the main script coroutine when the runtime first ticks or after a restart. */
     private fun ensureMainCoroutine() {
         if (mainJob?.isActive == true || isCancelled) return
         mainJob = scriptScope.launch(block = coroutineBlock)
     }
 
+    /** Records the local player state for later idle diagnostics. */
     private fun capturePlayerActivity(): PlayerActivitySnapshot {
         val tick = Client.getServerTick()
         val player = LocalPlayer.self()
@@ -286,6 +293,7 @@ abstract class SuspendableScript : Script() {
         )
     }
 
+    /** Runs queued coroutine continuations and tasks until the queue is empty or the script cancels. */
     private fun drainDispatchQueue() {
         if (pendingDispatches.isEmpty()) return
         while (pendingDispatches.isNotEmpty() && !isCancelled) {
@@ -293,6 +301,7 @@ abstract class SuspendableScript : Script() {
         }
     }
 
+    /** Resumes suspended waiters whose scheduled wake-up tick has elapsed. */
     private fun resumeReadyWaiters(currentTick: Int) {
         if (pendingWaits.isEmpty() || isCancelled) return
         while (true) {
@@ -305,10 +314,12 @@ abstract class SuspendableScript : Script() {
         }
     }
 
+    /** Throws the stored cancellation cause, if any, so suspending helpers observe cancellation promptly. */
     private fun ensureActive() {
         cancellationCause?.let { throw it }
     }
 
+    /** Clears cancellation state when the script activates so new runs start with a clean slate. */
     private fun resetCancellationState() {
         isCancelled = false
         cancellationCause = null
@@ -318,3 +329,4 @@ abstract class SuspendableScript : Script() {
         ensureScopeActive()
     }
 }
+
