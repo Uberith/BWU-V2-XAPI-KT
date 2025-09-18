@@ -1,6 +1,6 @@
 package net.botwithus.kxapi.game.query.base
 
-import net.botwithus.kxapi.game.query.internal.ResultSet
+import net.botwithus.kxapi.game.query.result.ResultSet
 
 
 interface Query<T> : MutableIterable<T> {

@@ -2,7 +2,7 @@ package net.botwithus.kxapi.game.query
 
 
 import net.botwithus.kxapi.game.query.base.Query
-import net.botwithus.kxapi.game.query.internal.ResultSet
+import net.botwithus.kxapi.game.query.result.ResultSet
 import net.botwithus.rs3.cache.assets.so.SceneObjectDefinition
 import net.botwithus.rs3.entities.SceneObject
 import net.botwithus.rs3.world.World
