@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 import java.util.ArrayDeque
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.resume
 
 /**
  * Base class for BotWithUs scripts that want Kotlin `suspend` semantics while still being scheduled on server ticks.
@@ -309,7 +310,7 @@ abstract class SuspendableScript : Script() {
             if (ready.isEmpty() || isCancelled) return
             ready.forEach { request ->
                 pendingWaits.remove(request)
-                request.continuation.resume(Unit) { }
+                request.continuation.resume(Unit)
             }
         }
     }
