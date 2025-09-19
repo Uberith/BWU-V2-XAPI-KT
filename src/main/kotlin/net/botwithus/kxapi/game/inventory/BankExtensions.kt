@@ -14,7 +14,7 @@ private val logger = LoggerFactory.getLogger(Bank::class.java)
 private const val INTERFACE_INDEX = 517
 private const val COMPONENT_INDEX = 202
 
-class BankExtensions  {
+object BankExtensions  {
     
     suspend fun close(script: SuspendableScript): Boolean {
         val res = Bank.close()
