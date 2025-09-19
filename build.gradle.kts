@@ -13,6 +13,11 @@ kotlin {
     jvmToolchain(24)
 }
 
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_24)
@@ -39,21 +44,29 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("net.botwithus.xapi:xapi:2.0.+")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     // Logging
     implementation("org.slf4j:slf4j-api:2.0.9")
 }
 
 publishing {
     repositories {
-        maven {
-            url = if (version.toString().endsWith("SNAPSHOT")) {
-                uri("https://nexus.botwithus.net/repository/maven-snapshots/")
-            } else {
-                uri("https://nexus.botwithus.net/repository/maven-releases/")
-            }
-            credentials {
-                username = System.getenv("MAVEN_REPO_USER")
-                password = System.getenv("MAVEN_REPO_PASS")
+        mavenLocal()
+
+        val repoUser = System.getenv("MAVEN_REPO_USER")?.takeIf { it.isNotBlank() }
+        val repoPass = System.getenv("MAVEN_REPO_PASS")?.takeIf { it.isNotBlank() }
+
+        if (repoUser != null && repoPass != null) {
+            maven {
+                url = if (version.toString().endsWith("SNAPSHOT")) {
+                    uri("https://nexus.botwithus.net/repository/maven-snapshots/")
+                } else {
+                    uri("https://nexus.botwithus.net/repository/maven-releases/")
+                }
+                credentials {
+                    username = repoUser
+                    password = repoPass
+                }
             }
         }
     }
