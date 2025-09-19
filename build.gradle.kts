@@ -53,15 +53,20 @@ publishing {
     repositories {
         mavenLocal()
 
-        maven {
-            url = if (version.toString().endsWith("SNAPSHOT")) {
-                uri("https://nexus.botwithus.net/repository/maven-snapshots/")
-            } else {
-                uri("https://nexus.botwithus.net/repository/maven-releases/")
-            }
-            credentials {
-                username = System.getenv("MAVEN_REPO_USER")
-                password = System.getenv("MAVEN_REPO_PASS")
+        val repoUser = System.getenv("MAVEN_REPO_USER")?.takeIf { it.isNotBlank() }
+        val repoPass = System.getenv("MAVEN_REPO_PASS")?.takeIf { it.isNotBlank() }
+
+        if (repoUser != null && repoPass != null) {
+            maven {
+                url = if (version.toString().endsWith("SNAPSHOT")) {
+                    uri("https://nexus.botwithus.net/repository/maven-snapshots/")
+                } else {
+                    uri("https://nexus.botwithus.net/repository/maven-releases/")
+                }
+                credentials {
+                    username = repoUser
+                    password = repoPass
+                }
             }
         }
     }

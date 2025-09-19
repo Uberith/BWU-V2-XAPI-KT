@@ -4,7 +4,7 @@ package net.botwithus.kxapi.game.query
 import net.botwithus.kxapi.game.query.base.Query
 import net.botwithus.kxapi.game.query.result.ResultSet
 import net.botwithus.kxapi.game.query.result.nearest
-import net.botwithus.kxapi.game.query.util.StringMatchers
+import net.botwithus.kxapi.util.StringMatchers
 import net.botwithus.rs3.entities.PathingEntity
 import net.botwithus.rs3.world.Distance
 import net.botwithus.rs3.world.World

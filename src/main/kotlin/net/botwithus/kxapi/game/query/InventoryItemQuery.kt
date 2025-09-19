@@ -2,7 +2,7 @@ package net.botwithus.kxapi.game.query
 
 import net.botwithus.kxapi.game.query.base.Query
 import net.botwithus.kxapi.game.query.result.ResultSet
-import net.botwithus.kxapi.game.query.util.StringMatchers
+import net.botwithus.kxapi.util.StringMatchers
 import net.botwithus.rs3.inventories.InventoryManager
 import net.botwithus.rs3.item.InventoryItem
 import java.util.function.BiFunction
@@ -70,31 +70,41 @@ class InventoryItemQuery(vararg inventoryIds: Int) : Query<InventoryItem> {
      * Uses a custom predicate to evaluate the item name. Helpful for case-insensitive
      * or fuzzy comparisons when the exact string is not known ahead of time.
      */
-    fun name(name: String, spred: BiFunction<String, CharSequence, Boolean>): InventoryItemQuery {
-        val prev = root
-        root = Predicate { t -> prev.test(t) && spred.apply(name, t.name ?: "") }
-        return this
-    }
+    fun name(name: String, matcher: BiFunction<String, CharSequence, Boolean>): InventoryItemQuery =
+        applyNameMatcher(matcher, name)
 
     /** Convenience overload keeping items whose name exactly matches [name]. */
-    fun name(name: String): InventoryItemQuery = name(name, BiFunction { a, b -> a.contentEquals(b) })
+    fun name(name: String): InventoryItemQuery =
+        applyNameMatcher(BiFunction { expected, actual -> actual.contentEquals(expected) }, name)
 
     /** Accepts several names and keeps items that match any of them. */
-    fun name(vararg names: String): InventoryItemQuery {
-        if (names.isEmpty()) return this
-        val prev = root
-        root = Predicate { t -> prev.test(t) && names.any { n -> n.contentEquals(t.name ?: "") } }
-        return this
-    }
+    fun name(vararg names: String): InventoryItemQuery =
+        applyNameMatcher(BiFunction { expected, actual -> actual.contentEquals(expected) }, *names)
 
     /** Case-insensitive name comparison against any of the provided values. */
-    fun nameEqualsIgnoreCase(vararg names: String): InventoryItemQuery = name(StringMatchers.equalsIgnoreCase, *names)
+    fun nameEqualsIgnoreCase(vararg names: String): InventoryItemQuery =
+        applyNameMatcher(StringMatchers.equalsIgnoreCase, *names)
 
     /** Partial match helper that keeps items whose name contains the supplied fragments. */
-    fun nameContains(vararg fragments: String): InventoryItemQuery = name(StringMatchers.contains, *fragments)
+    fun nameContains(vararg fragments: String): InventoryItemQuery =
+        applyNameMatcher(StringMatchers.contains, *fragments)
 
     /** Case-insensitive partial match helper for item names. */
-    fun nameContainsIgnoreCase(vararg fragments: String): InventoryItemQuery = name(StringMatchers.containsIgnoreCase, *fragments)
+    fun nameContainsIgnoreCase(vararg fragments: String): InventoryItemQuery =
+        applyNameMatcher(StringMatchers.containsIgnoreCase, *fragments)
+
+    private fun applyNameMatcher(
+        matcher: BiFunction<String, CharSequence, Boolean>,
+        vararg expected: String
+    ): InventoryItemQuery {
+        if (expected.isEmpty()) return this
+        val previous = root
+        root = Predicate { item ->
+            val actual = item.name ?: ""
+            previous.test(item) && expected.any { candidate -> matcher.apply(candidate, actual) }
+        }
+        return this
+    }
 
     /** Filters items whose name satisfies the single supplied regular expression. */
     fun name(pattern: Pattern): InventoryItemQuery {
