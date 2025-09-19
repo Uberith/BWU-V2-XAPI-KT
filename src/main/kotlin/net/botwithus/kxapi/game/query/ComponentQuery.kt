@@ -104,7 +104,7 @@ class ComponentQuery private constructor(private val ids: IntArray) :
         root = root.and { t ->
             val itemId = t.itemId
             val itemName = try { ConfigManager.getItemProvider().provide(itemId).name } catch (_: Throwable) { "" }
-            itemName != null && names.any { StringMatchers.equalsIgnoreCase.apply(it, itemName) }
+            itemName != null && names.any { StringMatchers.equalsIgnoreCase(it, itemName) }
         }
         return this
     }
@@ -114,7 +114,7 @@ class ComponentQuery private constructor(private val ids: IntArray) :
         root = root.and { t ->
             val itemId = t.itemId
             val itemName = try { ConfigManager.getItemProvider().provide(itemId).name } catch (_: Throwable) { "" }
-            itemName != null && fragments.any { StringMatchers.contains.apply(it, itemName) }
+            itemName != null && fragments.any { StringMatchers.contains(it, itemName) }
         }
         return this
     }
@@ -124,7 +124,7 @@ class ComponentQuery private constructor(private val ids: IntArray) :
         root = root.and { t ->
             val itemId = t.itemId
             val itemName = try { ConfigManager.getItemProvider().provide(itemId).name } catch (_: Throwable) { "" }
-            itemName != null && fragments.any { StringMatchers.containsIgnoreCase.apply(it, itemName) }
+            itemName != null && fragments.any { StringMatchers.containsIgnoreCase(it, itemName) }
         }
         return this
     }

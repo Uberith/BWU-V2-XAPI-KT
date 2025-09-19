@@ -1,15 +1,13 @@
 package net.botwithus.kxapi.util
 
-import java.util.function.BiFunction
-
 /** Utility comparators that keep query helpers concise. */
 object StringMatchers {
-    val equalsIgnoreCase: BiFunction<String, CharSequence, Boolean> =
-        BiFunction { expected, actual -> actual?.toString()?.equals(expected, ignoreCase = true) ?: false }
+    val equalsIgnoreCase: (String, CharSequence) -> Boolean =
+        { expected, actual -> actual.toString().equals(expected, ignoreCase = true) }
 
-    val contains: BiFunction<String, CharSequence, Boolean> =
-        BiFunction { fragment, actual -> actual?.toString()?.contains(fragment) ?: false }
+    val contains: (String, CharSequence) -> Boolean =
+        { fragment, actual -> actual.toString().contains(fragment) }
 
-    val containsIgnoreCase: BiFunction<String, CharSequence, Boolean> =
-        BiFunction { fragment, actual -> actual?.toString()?.contains(fragment, ignoreCase = true) ?: false }
+    val containsIgnoreCase: (String, CharSequence) -> Boolean =
+        { fragment, actual -> actual.toString().contains(fragment, ignoreCase = true) }
 }
