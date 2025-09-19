@@ -30,7 +30,7 @@ class NpcQuery : Query<PathingEntity> {
     }
 
     override fun results(): ResultSet<PathingEntity> {
-        val all = try { World.getNpcs() } catch (_: Throwable) { emptyList<PathingEntity>() }
+        val all = runCatching { World.getNpcs() }.getOrElse { emptyList<PathingEntity>() }
         val filtered = all.filter { n -> root.test(n) }
         return ResultSet(filtered)
     }

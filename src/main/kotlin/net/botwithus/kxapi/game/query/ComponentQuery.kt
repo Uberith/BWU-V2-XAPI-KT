@@ -90,7 +90,7 @@ class ComponentQuery private constructor(private val ids: IntArray) :
     fun itemName(name: String, spred: BiFunction<String, CharSequence, Boolean>): ComponentQuery {
         root = root.and { t ->
             val itemId = t.itemId
-            val itemName = try { ConfigManager.getItemProvider().provide(itemId).name } catch (_: Throwable) { "" }
+            val itemName = runCatching { ConfigManager.getItemProvider().provide(itemId).name }.getOrElse { "" }
             spred.apply(name, itemName ?: "")
         }
         return this
@@ -103,7 +103,7 @@ class ComponentQuery private constructor(private val ids: IntArray) :
     fun itemNameEqualsIgnoreCase(vararg names: String): ComponentQuery {
         root = root.and { t ->
             val itemId = t.itemId
-            val itemName = try { ConfigManager.getItemProvider().provide(itemId).name } catch (_: Throwable) { "" }
+            val itemName = runCatching { ConfigManager.getItemProvider().provide(itemId).name }.getOrElse { "" }
             itemName != null && names.any { StringMatchers.equalsIgnoreCase(it, itemName) }
         }
         return this
@@ -113,7 +113,7 @@ class ComponentQuery private constructor(private val ids: IntArray) :
     fun itemNameContains(vararg fragments: String): ComponentQuery {
         root = root.and { t ->
             val itemId = t.itemId
-            val itemName = try { ConfigManager.getItemProvider().provide(itemId).name } catch (_: Throwable) { "" }
+            val itemName = runCatching { ConfigManager.getItemProvider().provide(itemId).name }.getOrElse { "" }
             itemName != null && fragments.any { StringMatchers.contains(it, itemName) }
         }
         return this
@@ -123,7 +123,7 @@ class ComponentQuery private constructor(private val ids: IntArray) :
     fun itemNameContainsIgnoreCase(vararg fragments: String): ComponentQuery {
         root = root.and { t ->
             val itemId = t.itemId
-            val itemName = try { ConfigManager.getItemProvider().provide(itemId).name } catch (_: Throwable) { "" }
+            val itemName = runCatching { ConfigManager.getItemProvider().provide(itemId).name }.getOrElse { "" }
             itemName != null && fragments.any { StringMatchers.containsIgnoreCase(it, itemName) }
         }
         return this
@@ -237,19 +237,19 @@ class ComponentQuery private constructor(private val ids: IntArray) :
     override fun test(comp: Component): Boolean = root.test(comp)
 
     private fun tryGetInterfaceComponents(id: Int): List<Component>? {
-        return try {
+        return runCatching {
             val cls = Class.forName("net.botwithus.rs3.interfaces.Interfaces")
             val m = cls.getMethod("getInterface", Int::class.javaPrimitiveType)
-            val iface = m.invoke(null, id) ?: return null
+            val iface = m.invoke(null, id) ?: return@runCatching null
             val m2 = iface.javaClass.methods.firstOrNull { it.parameterCount == 0 && it.name.lowercase().contains("component") }
             val res = m2?.invoke(iface)
             val col = when (res) {
                 is Collection<*> -> res
                 is Array<*> -> res.asList()
                 else -> null
-            } ?: return null
+            } ?: return@runCatching null
             col.filterIsInstance<Component>()
-        } catch (_: Throwable) { null }
+        }.getOrNull()
     }
 }
 

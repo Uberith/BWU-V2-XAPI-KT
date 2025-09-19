@@ -35,11 +35,11 @@ class InventoryItemQuery(vararg inventoryIds: Int) : Query<InventoryItem> {
     override fun results(): ResultSet<InventoryItem> {
         val items = mutableListOf<InventoryItem>()
         for (id in ids) {
-            try {
-                val inv = InventoryManager.getInventory(id) ?: continue
+            runCatching {
+                val inv = InventoryManager.getInventory(id) ?: return@runCatching
                 val list = inv.items?.filter { root.test(it) } ?: emptyList()
                 items.addAll(list)
-            } catch (_: Throwable) { }
+            }
         }
         return ResultSet(items)
     }

@@ -21,11 +21,9 @@ fun <T> ResultSet<T>.nearestBy(distanceProvider: (T) -> Double): T? {
     var nearest: T? = null
     var bestDistance = Double.MAX_VALUE
     for (item in this) {
-        val distance = try {
+        val distance = runCatching {
             distanceProvider(item)
-        } catch (_: Throwable) {
-            continue
-        }
+        }.getOrElse { continue }
         if (distance < bestDistance) {
             bestDistance = distance
             nearest = item

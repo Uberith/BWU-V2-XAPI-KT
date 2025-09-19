@@ -26,11 +26,9 @@ fun <T> Query<T>.resultsCached(ttl: Duration): ResultSet<T> {
     }
 
     val fresh = results()
-    val ttlNanos = try {
+    val ttlNanos = runCatching {
         ttl.toNanos()
-    } catch (_: ArithmeticException) {
-        Long.MAX_VALUE
-    }
+    }.getOrElse { Long.MAX_VALUE }
     val expiry = if (ttlNanos >= Long.MAX_VALUE - now) Long.MAX_VALUE else now + ttlNanos
     synchronized(queryCache) {
         queryCache[this] = CachedResult(expiry, fresh)

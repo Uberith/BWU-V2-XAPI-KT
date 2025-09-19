@@ -111,12 +111,12 @@ object Backpack {
 
     /** Interacts with the provided [item] using the given [option]. */
     fun interact(item: InventoryItem, option: String): Boolean =
-        try {
+        runCatching {
             logger.info("[Backpack] Interact: option='{}', item='{}' ({})", option, item.name, item.id)
             val ok = item.interact(option) > 0
             if (!ok) logger.warn("[Backpack] Interaction failed: option='{}', item='{}' ({})", option, item.name, item.id)
             ok
-        } catch (_: Throwable) { false }
+        }.getOrElse { false }
 
     /** Finds the first item with any of [names] (contentEquals) and interacts with [option]. */
     fun interact(option: String, vararg names: String): Boolean =

@@ -66,7 +66,7 @@ object Bank {
      * @return true if an interaction was issued (not a guarantee the UI opened)
      */
     fun open(script: PermissiveScript): Boolean {
-        return try {
+        return runCatching {
             logger.info("Attempting find bank obj")
             val objUse = SceneObjectQuery.newQuery().name(BANK_NAME_PATTERN).option("Use").results().nearest()
             val objBank = SceneObjectQuery.newQuery().name(BANK_NAME_PATTERN).option("Bank").results().nearest()
@@ -121,10 +121,9 @@ object Bank {
                 script.warn("No valid bank object or NPC found")
                 false
             }
-        } catch (e: Exception) {
+        }.onFailure { e ->
             logger.error(e.message, e)
-            false
-        }
+        }.getOrElse { false }
     }
 
     /**
@@ -134,25 +133,25 @@ object Bank {
      */
     fun isOpen(): Boolean {
         // Try direct platform API via reflection to avoid hard module dependency issues
-        try {
+        runCatching {
             val cls = Class.forName("net.botwithus.rs3.interfaces.Interfaces")
             val m = cls.getMethod("isOpen", Int::class.javaPrimitiveType)
             val open = (m.invoke(null, INTERFACE_INDEX) as? Boolean) ?: false
             logger.debug("[Bank] isOpen via Interfaces.isOpen({}) -> {}", INTERFACE_INDEX, open)
             return open
-        } catch (t: Throwable) {
+        }.onFailure { t ->
             logger.debug("[Bank] Interfaces.isOpen reflection failed: {}", t.message)
         }
+        
         // Fallback: presence of a known bank component under interface 517
-        return try {
+        return runCatching {
             val comp = ComponentQuery.newQuery(INTERFACE_INDEX).id(COMPONENT_INDEX).results().first()
             val open = comp != null
             logger.debug("[Bank] isOpen via component probe (iface={}, compId={}) -> {}", INTERFACE_INDEX, COMPONENT_INDEX, open)
             open
-        } catch (t: Throwable) {
+        }.onFailure { t ->
             logger.debug("[Bank] isOpen component probe failed: {}", t.message)
-            false
-        }
+        }.getOrElse { false }
     }
     /**
      * Closes the bank via the close-button component action.
@@ -254,11 +253,11 @@ object Bank {
             // that references the item by name in text/optionBase.
             val all = ComponentQuery.newQuery(INTERFACE_INDEX).results().toList()
             fun hasWithdraw(c: net.botwithus.rs3.interfaces.Component): Boolean =
-                try { c.options?.any { it != null && it.contains("Withdraw", ignoreCase = true) } == true } catch (_: Throwable) { false }
+                runCatching { c.options?.any { it != null && it.contains("Withdraw", ignoreCase = true) } == true }.getOrElse { false }
             fun nameMatch(c: net.botwithus.rs3.interfaces.Component): Boolean {
                 val nm = item.name ?: return false
-                val inText = try { (c.text ?: "").contains(nm, ignoreCase = true) } catch (_: Throwable) { false }
-                val inBase = try { (c.optionBase ?: "").contains(nm, ignoreCase = true) } catch (_: Throwable) { false }
+                val inText = runCatching { (c.text ?: "").contains(nm, ignoreCase = true) }.getOrElse { false }
+                val inBase = runCatching { (c.optionBase ?: "").contains(nm, ignoreCase = true) }.getOrElse { false }
                 return inText || inBase
             }
             comp = all.firstOrNull { hasWithdraw(it) && (it.itemId == item.id || nameMatch(it)) }
@@ -278,7 +277,7 @@ object Bank {
             }
         }
 
-        val opts = try { comp.options } catch (_: Throwable) { null }
+        val opts = runCatching { comp.options }.getOrNull()
         logger.info("[Bank] interact(slot={}, option={}): compId={}, options={} ", slot, option, comp.componentId, opts)
 
         // Prefer textual withdraw actions if present; fall back to numeric option index
@@ -472,19 +471,19 @@ object Bank {
         var item = rs.first()
         // If the resolved component does not expose Deposit actions, retarget to one that does
         if (item != null) {
-            val opts = try { item.options } catch (_: Throwable) { null }
+            val opts = runCatching { item.options }.getOrNull()
             val hasDeposit = opts != null && opts.any { it?.contains("Deposit", true) == true }
             val hasWithdraw = opts != null && opts.any { it?.contains("Withdraw", true) == true }
             if (!hasDeposit || hasWithdraw) {
-                val alt = try {
+                val alt = runCatching {
                     ComponentQuery.newQuery(INTERFACE_INDEX)
                         .itemId(item.itemId)
                         .results()
                         .firstOrNull { c ->
-                            val o = try { c.options } catch (_: Throwable) { null }
+                            val o = runCatching { c.options }.getOrNull()
                             o != null && o.any { it?.contains("Deposit", true) == true } && !o.any { it?.contains("Withdraw", true) == true }
                         }
-                } catch (_: Throwable) { null }
+                }.getOrNull()
                 if (alt != null) {
                     logger.info("[Bank] deposit(query): retargeted to deposit-capable component for itemId={} (compId={})", item.itemId, alt.componentId)
                     item = alt
@@ -511,19 +510,19 @@ object Bank {
         }
         var item = rs.first()
         if (item != null) {
-            val opts = try { item.options } catch (_: Throwable) { null }
+            val opts = runCatching { item.options }.getOrNull()
             val hasDeposit = opts != null && opts.any { it?.contains("Deposit", true) == true }
             val hasWithdraw = opts != null && opts.any { it?.contains("Withdraw", true) == true }
             if (!hasDeposit || hasWithdraw) {
-                val alt = try {
+                val alt = runCatching {
                     ComponentQuery.newQuery(INTERFACE_INDEX)
                         .itemId(item.itemId)
                         .results()
                         .firstOrNull { c ->
-                            val o = try { c.options } catch (_: Throwable) { null }
+                            val o = runCatching { c.options }.getOrNull()
                             o != null && o.any { it?.contains("Deposit", true) == true } && !o.any { it?.contains("Withdraw", true) == true }
                         }
-                } catch (_: Throwable) { null }
+                }.getOrNull()
                 if (alt != null) {
                     logger.info("[Bank] depositAll(query): retargeted to deposit-capable component for itemId={} (compId={})", item.itemId, alt.componentId)
                     item = alt
@@ -554,7 +553,7 @@ object Bank {
             logger.warn("[Bank] deposit(comp, option={}): component is null", option)
             return false
         }
-        val opts = try { comp.options } catch (_: Throwable) { null }
+        val opts = runCatching { comp.options }.getOrNull()
         logger.info("[Bank] deposit(comp, option={}): compId={}, opts={} ", option, comp.componentId, opts)
         val ok = run {
             val chosen = opts?.let {
@@ -693,7 +692,7 @@ object Bank {
             logger.info("[Bank] emptyBox(name='{}', option='{}'): bank not open", boxName, option)
             return false
         }
-        try {
+        runCatching {
             // 1) Target the specific item-id component inside the bank interface (most reliable)
             val bpItem = Backpack.getItem({ n, h -> h.toString().contains(n, true) }, boxName)
             logger.info(
@@ -732,7 +731,7 @@ object Bank {
             var fuzzyTried = 0
             var fuzzyOk = false
             results.stream().forEach { comp ->
-                try {
+                runCatching {
                     val opts = comp.options
                     if (opts != null) {
                         for (op in opts) {
@@ -749,18 +748,17 @@ object Bank {
                             }
                         }
                     }
-                } catch (_: Throwable) { }
+                }
             }
             logger.debug("[Bank] emptyBox(name='{}'): fuzzy options tried {} -> {}", boxName, fuzzyTried, fuzzyOk)
             if (fuzzyOk) return true
             // 3) Last-resort: interact with the backpack item directly using the provided option
             val ok = if (bpItem != null) Backpack.interact(bpItem, option) else false
             logger.info("[Bank] emptyBox(name='{}'): fallback backpack interact -> {}", boxName, ok)
-            return ok
-        } catch (t: Throwable) {
+            ok
+        }.onFailure { t ->
             logger.warn("[Bank] emptyBox(name='{}') exception: {}", boxName, t.message)
-            return false
-        }
+        }.getOrElse { false }
     }
 
     fun emptyBox(script: PermissiveScript, boxName: String, option: String): Boolean {
@@ -986,19 +984,19 @@ object Bank {
     suspend fun depositAll(script: SuspendableScript, vararg patterns: Pattern): Boolean {
         logger.info("[Bank] suspend depositAll(patterns): begin patternsCount={}", patterns.size)
         // Resolve by backpack item ids using ConfigManager names (backpack item.name may be blank while bank is open)
-        val ids = try {
+        val ids = runCatching {
             val inv = Backpack.getInventory()
             val items = inv?.items ?: emptyList()
             items.stream()
                 .filter { it.id != -1 }
                 .filter { i ->
-                    val name = try { net.botwithus.rs3.cache.assets.ConfigManager.getItemProvider().provide(i.id).name } catch (_: Throwable) { "" }
+                    val name = runCatching { net.botwithus.rs3.cache.assets.ConfigManager.getItemProvider().provide(i.id).name }.getOrElse { "" }
                     patterns.any { p -> p.matcher(name ?: "").find() }
                 }
                 .map { it.id }
                 .distinct()
                 .toList()
-        } catch (_: Throwable) { emptyList<Int>() }
+        }.getOrElse { emptyList<Int>() }
         logger.info("[Bank] suspend depositAll(patterns): resolved ids={} (count={})", ids, ids.size)
         var allOk = true
         if (ids.isNotEmpty()) {
@@ -1024,7 +1022,7 @@ object Bank {
         val logsPatternRequested = patterns.any { it.pattern().contains("logs", ignoreCase = true) }
         if (logsPatternRequested) {
             val commonLogIds = setOf(1511, 1513, 1515, 1517, 1519, 1521) // normal, magic, yew, maple, willow, oak (OSRS/RS3 common ids)
-            val inv = try { Backpack.getInventory() } catch (_: Throwable) { null }
+            val inv = runCatching { Backpack.getInventory() }.getOrNull()
             val items = inv?.items ?: emptyList()
             val fallbackIds = items.map { it.id }.filter { it in commonLogIds }.distinct()
             logger.info("[Bank] suspend depositAll(patterns): logs-heuristic ids={} (count={})", fallbackIds, fallbackIds.size)
@@ -1048,52 +1046,52 @@ object Bank {
         }
 
         // Diagnostics: log a small sample of backpack item ids->names when no ids resolved
-        try {
+        runCatching {
             val inv = Backpack.getInventory()
             val items = inv?.items ?: emptyList()
             val samples = items.filter { it.id != -1 }
                 .map {
-                    val nm = try { net.botwithus.rs3.cache.assets.ConfigManager.getItemProvider().provide(it.id).name } catch (_: Throwable) { "" }
+                    val nm = runCatching { net.botwithus.rs3.cache.assets.ConfigManager.getItemProvider().provide(it.id).name }.getOrElse { "" }
                     "${it.id}:${nm}"
                 }
                 .take(10)
             logger.info("[Bank] suspend depositAll(patterns): backpack sample (id:name) -> {}", samples)
-        } catch (_: Throwable) { }
+        }
 
         // Fallback: derive targets directly from bank interface components by itemName
-        val bankTargets = try {
+        val bankTargets = runCatching {
             ComponentQuery.newQuery(INTERFACE_INDEX)
                 .results()
                 .toList()
                 .filter { c ->
-                    val opts = try { c.options } catch (_: Throwable) { null }
+                    val opts = runCatching { c.options }.getOrNull()
                     val depositable = opts != null && opts.any { it?.contains("Deposit", true) == true } && !opts.any { it?.contains("Withdraw", true) == true }
                     if (!depositable) return@filter false
-                    val itemName = try {
+                    val itemName = runCatching {
                         net.botwithus.rs3.cache.assets.ConfigManager.getItemProvider().provide(c.itemId).name
-                    } catch (_: Throwable) { null }
+                    }.getOrNull()
                     val nameMatches = itemName != null && patterns.any { p -> p.matcher(itemName).find() }
                     val logsHeuristic = logsPatternRequested && c.itemId in setOf(1511, 1513, 1515, 1517, 1519, 1521)
                     nameMatches || logsHeuristic
                 }
-        } catch (_: Throwable) { emptyList() }
+        }.getOrElse { emptyList() }
 
         logger.info("[Bank] suspend depositAll(patterns): bank-fallback targets={} ", bankTargets.size)
         if (bankTargets.isEmpty()) {
             // Log a compact summary of any deposit-capable comps for debugging
-            try {
+            runCatching {
                 val all = ComponentQuery.newQuery(INTERFACE_INDEX).results().toList()
                 val depositables = all.filter { c ->
-                    val o = try { c.options } catch (_: Throwable) { null }
+                    val o = runCatching { c.options }.getOrNull()
                     o != null && o.any { it?.contains("Deposit", true) == true }
                 }
                 val sample = depositables.take(10).map { c ->
-                    val nm = try { net.botwithus.rs3.cache.assets.ConfigManager.getItemProvider().provide(c.itemId).name } catch (_: Throwable) { "" }
-                    val opts = try { c.options } catch (_: Throwable) { null }
+                    val nm = runCatching { net.botwithus.rs3.cache.assets.ConfigManager.getItemProvider().provide(c.itemId).name }.getOrElse { "" }
+                    val opts = runCatching { c.options }.getOrNull()
                     "${c.componentId}:${c.itemId}:${nm}:${opts}"
                 }
                 logger.info("[Bank] suspend depositAll(patterns): depositable comps sample compId:itemId:name:options -> {}", sample)
-            } catch (_: Throwable) { }
+            }
         }
         for (comp in bankTargets) {
             val ok = deposit(script, comp, 1)
