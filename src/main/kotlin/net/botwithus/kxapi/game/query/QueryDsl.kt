@@ -1,5 +1,11 @@
 package net.botwithus.kxapi.game.query
 
+import net.botwithus.xapi.query.ComponentQuery
+import net.botwithus.xapi.query.GroundItemQuery
+import net.botwithus.xapi.query.InventoryItemQuery
+import net.botwithus.xapi.query.NpcQuery
+import net.botwithus.xapi.query.SceneObjectQuery
+
 /**
  * Lightweight DSL entry points that mirror the Java helpers while keeping
  * the Kotlin call-site terse.

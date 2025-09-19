@@ -1,5 +1,6 @@
 package net.botwithus.kxapi.script
 
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -8,10 +9,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import net.botwithus.rs3.client.Client
 import net.botwithus.rs3.entities.LocalPlayer
 import net.botwithus.scripts.Script
+import net.botwithus.ui.workspace.Workspace
+import net.botwithus.xapi.script.BwuScript
+import net.botwithus.xapi.script.ui.interfaces.BuildableUI
 import org.slf4j.LoggerFactory
 import java.util.ArrayDeque
 import kotlin.coroutines.CoroutineContext
@@ -28,7 +33,7 @@ import kotlin.coroutines.resume
  * continues. Additional coroutines can be launched via [scriptScope] and coordinate with a central waiting queue so
  * multiple suspensions can coexist safely.
  */
-abstract class SuspendableScript : Script() {
+abstract class SuspendableScript : BwuScript() {
 
     /** Snapshot capturing minimal player activity information for idle checks. */
     data class PlayerActivitySnapshot(
@@ -103,6 +108,41 @@ abstract class SuspendableScript : Script() {
      * scripts simply perform their logic here.
      */
     abstract suspend fun onLoop()
+
+
+    protected open suspend fun onDrawConfigSuspend(workspace: Workspace) {}
+
+    protected open suspend fun buildUI(): BuildableUI? = null
+
+    protected open suspend fun saveData(data: JsonObject) {}
+
+    protected open suspend fun loadData(data: JsonObject) {}
+
+    override fun onDrawConfig(p0: Workspace?) {
+        if (p0 != null) {
+            scriptScope.launch { onDrawConfigSuspend(p0) }
+        }
+    }
+
+    override fun getBuildableUI(): BuildableUI? {
+        var ui: BuildableUI? = null
+        runBlocking(scriptDispatcher) {
+            ui = buildUI()
+        }
+        return ui
+    }
+
+    override fun savePersistentData(p0: JsonObject?) {
+        if (p0 != null) {
+            scriptScope.launch { saveData(p0) }
+        }
+    }
+
+    override fun loadPersistentData(p0: JsonObject?) {
+        if (p0 != null) {
+            scriptScope.launch { loadData(p0) }
+        }
+    }
 
     /**
      * Entry point called by the BotWithUs runtime every tick. It drains any pending coroutine dispatches, resumes
