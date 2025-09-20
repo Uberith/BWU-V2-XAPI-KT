@@ -37,23 +37,23 @@ class Bank : JBank() {
          * @param permissive Script wrapper that is allowed to interact with blocking UI states.
          * @return true when the bank was already open or an open interaction was successfully issued.
          */
-        fun open(permissive: PermissiveScript): Boolean = JBank.open(permissive)
+        fun open(permissive: PermissiveScript) = JBank.open(permissive)
 
         /**
          * Checks whether the bank widget is currently visible to the local player.
          * @return true when the bank interface is open.
          */
-        fun isOpen(): Boolean = JBank.isOpen()
+        fun isOpen() = JBank.isOpen()
         /**
          * Attempts to close the bank interface.
          * @return true if the close interaction was executed.
          */
-        fun close(): Boolean = JBank.close()
+        fun close() = JBank.close()
         /**
          * Loads the most recently used bank preset through the Java API.
          * @return true if the preset load interaction was triggered.
          */
-        fun loadLastPreset(): Boolean = JBank.loadLastPreset()
+        fun loadLastPreset() = JBank.loadLastPreset()
 
         /**
          * Provides direct access to the active bank inventory interface.
@@ -70,7 +70,7 @@ class Bank : JBank() {
          * @param results Resolved bank items to aggregate.
          * @return Count of matching items.
          */
-        fun count(results: ResultSet<InventoryItem>): Int = JBank.count(results)
+        fun count(results: ResultSet<InventoryItem>) = JBank.count(results)
         /**
          * Finds the first item in the bank that satisfies the provided query.
          * @param query Builder describing the desired inventory item.
@@ -81,46 +81,46 @@ class Bank : JBank() {
          * Checks whether the bank currently has no withdrawable items.
          * @return true if the bank contains zero items.
          */
-        fun isEmpty(): Boolean = JBank.isEmpty()
+        fun isEmpty() = JBank.isEmpty()
         /**
          * Executes an interaction on a specific bank slot using an option index.
          * @param slot Zero-based slot index inside the bank container.
          * @param option Interaction option index to trigger.
          * @return true if the interaction was dispatched.
          */
-        fun interact(slot: Int, option: Int): Boolean = JBank.interact(slot, option)
+        fun interact(slot: Int, option: Int) = JBank.interact(slot, option)
 
         /**
          * Tests whether the bank contains items satisfying the given query.
          * @param query Declarative query describing the desired items.
          * @return true if any bank item matches.
          */
-        fun contains(query: InventoryItemQuery): Boolean = JBank.contains(query)
+        fun contains(query: InventoryItemQuery) = JBank.contains(query)
         /**
          * Checks for the presence of one or more items by name.
          * @param itemNames Display names of the items to look for.
          * @return true if at least one item name is present.
          */
-        fun contains(vararg itemNames: String): Boolean = JBank.contains(*itemNames)
+        fun contains(vararg itemNames: String) = JBank.contains(*itemNames)
         /**
          * Checks whether any bank item name matches the supplied pattern.
          * @param itemNamePattern Case-insensitive pattern evaluated against item names.
          * @return true if the pattern matches at least one item.
          */
-        fun contains(itemNamePattern: Pattern): Boolean = JBank.contains(itemNamePattern)
+        fun contains(itemNamePattern: Pattern) = JBank.contains(itemNamePattern)
 
         /**
          * Counts the total number of items that match any of the provided names.
          * @param itemNames Names to tally.
          * @return Combined quantity of matching items.
          */
-        fun getCount(vararg itemNames: String): Int = JBank.getCount(*itemNames)
+        fun getCount(vararg itemNames: String) = JBank.getCount(*itemNames)
         /**
          * Counts the number of items with names that satisfy the provided pattern.
          * @param namePattern Regex-style pattern for matching item names.
          * @return Total quantity of items matched by the pattern.
          */
-        fun getCount(namePattern: Pattern): Int = JBank.getCount(namePattern)
+        fun getCount(namePattern: Pattern) = JBank.getCount(namePattern)
 
         // ---- FULL withdraw surface (matches Java) ----
         /**
@@ -129,8 +129,7 @@ class Bank : JBank() {
          * @param option Withdraw option index (for example a quantity shortcut).
          * @return true if the withdraw interaction was performed.
          */
-        fun withdraw(query: InventoryItemQuery, option: Int): Boolean =
-            JBank.withdraw(query, option)
+        fun withdraw(query: InventoryItemQuery, option: Int) = JBank.withdraw(query, option)
 
         /**
          * Withdraws an item identified by its display name.
@@ -138,8 +137,7 @@ class Bank : JBank() {
          * @param option Withdraw option index or quantity shortcut.
          * @return true if the withdraw interaction was performed.
          */
-        fun withdraw(itemName: String, option: Int): Boolean =
-            JBank.withdraw(itemName, option)
+        fun withdraw(itemName: String, option: Int) = JBank.withdraw(itemName, option)
 
         /**
          * Withdraws an item using its numeric identifier.
@@ -147,8 +145,7 @@ class Bank : JBank() {
          * @param option Withdraw option index or quantity shortcut.
          * @return true if the withdraw interaction was performed.
          */
-        fun withdraw(itemId: Int, option: Int): Boolean =
-            JBank.withdraw(itemId, option)
+        fun withdraw(itemId: Int, option: Int) = JBank.withdraw(itemId, option)
 
         /**
          * Withdraws the first item whose name matches the supplied pattern.
@@ -156,44 +153,43 @@ class Bank : JBank() {
          * @param option Withdraw option index or quantity shortcut.
          * @return true if the withdraw interaction was performed.
          */
-        fun withdraw(namePattern: Pattern, option: Int): Boolean =
-            JBank.withdraw(namePattern, option)
+        fun withdraw(namePattern: Pattern, option: Int) = JBank.withdraw(namePattern, option)
 
         /**
          * Withdraws the entire stack of an item by name.
          * @param name Display name of the item to withdraw.
          * @return true if the withdraw interaction was performed.
          */
-        fun withdrawAll(name: String): Boolean = JBank.withdrawAll(name)
+        fun withdrawAll(name: String) = JBank.withdrawAll(name)
         /**
          * Withdraws the entire stack of an item by identifier.
          * @param id Item ID whose contents should be withdrawn.
          * @return true if the withdraw interaction was performed.
          */
-        fun withdrawAll(id: Int): Boolean = JBank.withdrawAll(id)
+        fun withdrawAll(id: Int) = JBank.withdrawAll(id)
         /**
          * Withdraws the entire stack of the first item matching the provided pattern.
          * @param pattern Pattern applied to item names.
          * @return true if the withdraw interaction was performed.
          */
-        fun withdrawAll(pattern: Pattern): Boolean = JBank.withdrawAll(pattern)
+        fun withdrawAll(pattern: Pattern) = JBank.withdrawAll(pattern)
 
         // ---- Deposits (no-script + script variants) ----
         /**
          * Deposits all items from both backpack and equipment into the bank.
          * @return true if a deposit interaction was performed.
          */
-        fun depositAll(): Boolean = JBank.depositAll()
+        fun depositAll() = JBank.depositAll()
         /**
          * Deposits all currently equipped items into the bank.
          * @return true if a deposit interaction was performed.
          */
-        fun depositEquipment(): Boolean = JBank.depositEquipment()
+        fun depositEquipment() = JBank.depositEquipment()
         /**
          * Deposits the entire backpack into the bank.
          * @return true if a deposit interaction was performed.
          */
-        fun depositBackpack(): Boolean = JBank.depositBackpack()
+        fun depositBackpack() = JBank.depositBackpack()
 
         /**
          * Deposits items by interacting with the provided component query.
@@ -202,8 +198,7 @@ class Bank : JBank() {
          * @param option Option index to use on the resolved component.
          * @return true if the deposit interaction was performed.
          */
-        fun deposit(permissive: PermissiveScript, query: ComponentQuery, option: Int): Boolean =
-            JBank.deposit(permissive, query, option)
+        fun deposit(permissive: PermissiveScript, query: ComponentQuery, option: Int) = JBank.deposit(permissive, query, option)
 
         /**
          * Deposits all matching items using a pre-resolved component query.
@@ -211,8 +206,7 @@ class Bank : JBank() {
          * @param query Component query resolving the target widget.
          * @return true if the deposit interaction was performed.
          */
-        fun depositAll(permissive: PermissiveScript, query: ComponentQuery): Boolean =
-            JBank.depositAll(permissive, query)
+        fun depositAll(permissive: PermissiveScript, query: ComponentQuery) = JBank.depositAll(permissive, query)
 
         /**
          * Deposits items by directly interacting with a concrete component.
@@ -221,8 +215,7 @@ class Bank : JBank() {
          * @param option Option index applied to the component.
          * @return true if the deposit interaction was performed.
          */
-        fun deposit(permissive: PermissiveScript, comp: Component?, option: Int): Boolean =
-            JBank.deposit(permissive, comp, option)
+        fun deposit(permissive: PermissiveScript, comp: Component?, option: Int) = JBank.deposit(permissive, comp, option)
 
         /**
          * Deposits every item whose name matches any of the supplied values.
@@ -230,8 +223,7 @@ class Bank : JBank() {
          * @param itemNames Names of items to deposit.
          * @return true if at least one deposit interaction was performed.
          */
-        fun depositAll(permissive: PermissiveScript, vararg itemNames: String): Boolean =
-            JBank.depositAll(permissive, *itemNames)
+        fun depositAll(permissive: PermissiveScript, vararg itemNames: String) = JBank.depositAll(permissive, *itemNames)
 
         /**
          * Deposits every item whose identifier is in the supplied list.
@@ -239,8 +231,7 @@ class Bank : JBank() {
          * @param itemIds Identifiers of the items to deposit.
          * @return true if at least one deposit interaction was performed.
          */
-        fun depositAll(permissive: PermissiveScript, vararg itemIds: Int): Boolean =
-            JBank.depositAll(permissive, *itemIds)
+        fun depositAll(permissive: PermissiveScript, vararg itemIds: Int) = JBank.depositAll(permissive, *itemIds)
 
         /**
          * Deposits items whose names satisfy any of the provided patterns.
@@ -248,8 +239,7 @@ class Bank : JBank() {
          * @param patterns Name patterns to match against backpack items.
          * @return true if at least one deposit interaction was performed.
          */
-        fun depositAll(permissive: PermissiveScript, vararg patterns: Pattern): Boolean =
-            JBank.depositAll(permissive, *patterns)
+        fun depositAll(permissive: PermissiveScript, vararg patterns: Pattern) = JBank.depositAll(permissive, *patterns)
 
         /**
          * Deposits all items except those with names in the provided list.
@@ -257,8 +247,7 @@ class Bank : JBank() {
          * @param itemNames Names of items to keep in the backpack.
          * @return true if the deposit interaction was performed.
          */
-        fun depositAllExcept(permissive: PermissiveScript, vararg itemNames: String): Boolean =
-            JBank.depositAllExcept(permissive, *itemNames)
+        fun depositAllExcept(permissive: PermissiveScript, vararg itemNames: String) = JBank.depositAllExcept(permissive, *itemNames)
 
         /**
          * Deposits all items except those whose IDs appear in the exclusion list.
@@ -266,8 +255,7 @@ class Bank : JBank() {
          * @param ids Identifiers of items to keep in the backpack.
          * @return true if the deposit interaction was performed.
          */
-        fun depositAllExcept(permissive: PermissiveScript, vararg ids: Int): Boolean =
-            JBank.depositAllExcept(permissive, *ids)
+        fun depositAllExcept(permissive: PermissiveScript, vararg ids: Int) = JBank.depositAllExcept(permissive, *ids)
 
         /**
          * Deposits all items except those whose names match any exclusion pattern.
@@ -275,8 +263,7 @@ class Bank : JBank() {
          * @param patterns Name patterns describing items to keep.
          * @return true if the deposit interaction was performed.
          */
-        fun depositAllExcept(permissive: PermissiveScript, vararg patterns: Pattern): Boolean =
-            JBank.depositAllExcept(permissive, *patterns)
+        fun depositAllExcept(permissive: PermissiveScript, vararg patterns: Pattern) = JBank.depositAllExcept(permissive, *patterns)
 
         /**
          * Deposits a specific item by identifier using the provided option index.
@@ -285,8 +272,7 @@ class Bank : JBank() {
          * @param option Option index to trigger on the component.
          * @return true if the deposit interaction was performed.
          */
-        fun deposit(permissive: PermissiveScript, itemId: Int, option: Int): Boolean =
-            JBank.deposit(permissive, itemId, option)
+        fun deposit(permissive: PermissiveScript, itemId: Int, option: Int) = JBank.deposit(permissive, itemId, option)
 
         /**
          * Deposits a named item using a custom string comparison function.
@@ -301,7 +287,7 @@ class Bank : JBank() {
             name: String,
             spred: BiFunction<String, CharSequence, Boolean>,
             option: Int
-        ): Boolean = JBank.deposit(permissive, name, spred, option)
+        ) = JBank.deposit(permissive, name, spred, option)
 
         /**
          * Deposits a named item using the supplied option index.
@@ -310,8 +296,7 @@ class Bank : JBank() {
          * @param option Option index to trigger on the component.
          * @return true if the deposit interaction was performed.
          */
-        fun deposit(permissive: PermissiveScript, name: String, option: Int): Boolean =
-            JBank.deposit(permissive, name, option)
+        fun deposit(permissive: PermissiveScript, name: String, option: Int) = JBank.deposit(permissive, name, option)
 
         // ---- Presets / vars ----
         /**
@@ -320,8 +305,7 @@ class Bank : JBank() {
          * @param presetNumber Preset slot identifier (1-based in the UI).
          * @return true if the preset load interaction was performed.
          */
-        fun loadPreset(permissive: PermissiveScript, presetNumber: Int): Boolean =
-            JBank.loadPreset(permissive, presetNumber)
+        fun loadPreset(permissive: PermissiveScript, presetNumber: Int) = JBank.loadPreset(permissive, presetNumber)
 
         /**
          * Reads a varbit value associated with a specific bank slot.
@@ -329,14 +313,13 @@ class Bank : JBank() {
          * @param varbitId Varbit identifier to read.
          * @return The current varbit value, or 0 when unavailable.
          */
-        fun getVarbitValue(slot: Int, varbitId: Int): Int =
-            JBank.getVarbitValue(slot, varbitId)
+        fun getVarbitValue(slot: Int, varbitId: Int) = JBank.getVarbitValue(slot, varbitId)
 
         /**
          * Retrieves the index of the last preset loaded this session.
          * @return Preset index recorded by the Java API, or -1 if none was recorded.
          */
-        fun getPreviousLoadedPreset(): Int = JBank.getPreviousLoadedPreset()
+        fun getPreviousLoadedPreset() = JBank.getPreviousLoadedPreset()
 
         // ---------- Suspend wrappers for convenience ----------
         /**
@@ -454,13 +437,13 @@ class Bank : JBank() {
          */
         fun emptyBox(option: String): Boolean {
             if (!isOpen()) {
-                logger.info("[Bank] emptyBox(option='{}'): bank not open", option)
+                logger.debug("emptyBox(option='{}'): bank not open", option)
                 return false
             }
             val comp = ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()
             val ok = comp?.let { it.interact(1) > 0 || it.interact(option) > 0 } ?: false
-            logger.info(
-                "[Bank] emptyBox(option='{}'): component {} -> {}",
+            logger.debug(
+                "emptyBox(option='{}'): component {} -> {}",
                 option, if (comp != null) "found" else "not-found", ok
             )
             return ok
@@ -474,13 +457,13 @@ class Bank : JBank() {
          */
         fun emptyBox(boxName: String, option: String): Boolean {
             if (!isOpen()) {
-                logger.info("[Bank] emptyBox(name='{}', option='{}'): bank not open", boxName, option)
+                logger.debug("emptyBox(name='{}', option='{}'): bank not open", boxName, option)
                 return false
             }
             return runCatching {
                 val bpItem = Backpack.getItem({ _, h -> h.toString().contains(boxName, true) }, boxName)
-                logger.info(
-                    "[Bank] emptyBox(name='{}', option='{}'): backpack item -> {}",
+                logger.debug(
+                    "emptyBox(name='{}', option='{}'): backpack item -> {}",
                     boxName, option, bpItem?.let { "${it.name} (${it.id})" } ?: "null"
                 )
 
@@ -491,13 +474,13 @@ class Bank : JBank() {
                         .results()
                         .firstOrNull()
                         ?.takeIf { comp -> comp.interact(1) > 0 || comp.interact(option) > 0 }
-                        ?.also { logger.info("[Bank] emptyBox(name='{}'): interacted with component by id -> true", boxName) }
+                        ?.also { logger.debug("emptyBox(name='{}'): interacted with component by id -> true", boxName) }
                         ?.let { return true }
                 }
 
                 ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()?.let { comp ->
                     if (comp.interact(1) > 0 || comp.interact(option) > 0) {
-                        logger.info("[Bank] emptyBox(name='{}'): interacted with component by option -> true", boxName)
+                        logger.debug("emptyBox(name='{}'): interacted with component by option -> true", boxName)
                         return true
                     }
                 }
@@ -509,7 +492,7 @@ class Bank : JBank() {
                             ?.takeIf { it.contains("empty") && (it.contains("log") || it.contains("nest") || it.contains("box")) }
                             ?.takeIf { comp.interact(op) > 0 }
                             ?.also {
-                                logger.info("[Bank] emptyBox(name='{}'): fuzzy component option '{}' -> true", boxName, op)
+                                logger.debug("emptyBox(name='{}'): fuzzy component option '{}' -> true", boxName, op)
                                 fuzzyOk = true
                                 return@forEach
                             }
@@ -518,10 +501,10 @@ class Bank : JBank() {
                 if (fuzzyOk) return true
 
                 bpItem?.interact(option)
-                logger.info("[Bank] emptyBox(name='{}'): fallback backpack interact -> {}", boxName, true)
+                logger.debug("emptyBox(name='{}'): fallback backpack interact -> {}", boxName, true)
                 true
             }.onFailure { t ->
-                logger.warn("[Bank] emptyBox(name='{}') exception: {}", boxName, t.message)
+                logger.warn("emptyBox(name='{}') exception: {}", boxName, t.message)
             }.getOrElse { false }
         }
     }
