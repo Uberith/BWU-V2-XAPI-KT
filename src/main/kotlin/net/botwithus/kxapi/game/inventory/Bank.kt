@@ -198,7 +198,8 @@ class Bank : JBank() {
          * @param option Option index to use on the resolved component.
          * @return true if the deposit interaction was performed.
          */
-        fun deposit(permissive: PermissiveScript, query: ComponentQuery, option: Int) = JBank.deposit(permissive, query, option)
+        fun deposit(permissive: PermissiveScript, query: ComponentQuery, option: Int) =
+            JBank.deposit(permissive, query, option)
 
         /**
          * Deposits all matching items using a pre-resolved component query.
@@ -206,7 +207,8 @@ class Bank : JBank() {
          * @param query Component query resolving the target widget.
          * @return true if the deposit interaction was performed.
          */
-        fun depositAll(permissive: PermissiveScript, query: ComponentQuery) = JBank.depositAll(permissive, query)
+        fun depositAll(permissive: PermissiveScript, query: ComponentQuery) =
+            JBank.depositAll(permissive, query)
 
         /**
          * Deposits items by directly interacting with a concrete component.
@@ -215,7 +217,8 @@ class Bank : JBank() {
          * @param option Option index applied to the component.
          * @return true if the deposit interaction was performed.
          */
-        fun deposit(permissive: PermissiveScript, comp: Component?, option: Int) = JBank.deposit(permissive, comp, option)
+        fun deposit(permissive: PermissiveScript, comp: Component?, option: Int) =
+            JBank.deposit(permissive, comp, option)
 
         /**
          * Deposits every item whose name matches any of the supplied values.
@@ -223,7 +226,8 @@ class Bank : JBank() {
          * @param itemNames Names of items to deposit.
          * @return true if at least one deposit interaction was performed.
          */
-        fun depositAll(permissive: PermissiveScript, vararg itemNames: String) = JBank.depositAll(permissive, *itemNames)
+        fun depositAll(permissive: PermissiveScript, vararg itemNames: String) =
+            JBank.depositAll(permissive, *itemNames)
 
         /**
          * Deposits every item whose identifier is in the supplied list.
@@ -231,7 +235,8 @@ class Bank : JBank() {
          * @param itemIds Identifiers of the items to deposit.
          * @return true if at least one deposit interaction was performed.
          */
-        fun depositAll(permissive: PermissiveScript, vararg itemIds: Int) = JBank.depositAll(permissive, *itemIds)
+        fun depositAll(permissive: PermissiveScript, vararg itemIds: Int) =
+            JBank.depositAll(permissive, *itemIds)
 
         /**
          * Deposits items whose names satisfy any of the provided patterns.
@@ -239,7 +244,8 @@ class Bank : JBank() {
          * @param patterns Name patterns to match against backpack items.
          * @return true if at least one deposit interaction was performed.
          */
-        fun depositAll(permissive: PermissiveScript, vararg patterns: Pattern) = JBank.depositAll(permissive, *patterns)
+        fun depositAll(permissive: PermissiveScript, vararg patterns: Pattern) =
+            JBank.depositAll(permissive, *patterns)
 
         /**
          * Deposits all items except those with names in the provided list.
@@ -247,7 +253,8 @@ class Bank : JBank() {
          * @param itemNames Names of items to keep in the backpack.
          * @return true if the deposit interaction was performed.
          */
-        fun depositAllExcept(permissive: PermissiveScript, vararg itemNames: String) = JBank.depositAllExcept(permissive, *itemNames)
+        fun depositAllExcept(permissive: PermissiveScript, vararg itemNames: String) =
+            JBank.depositAllExcept(permissive, *itemNames)
 
         /**
          * Deposits all items except those whose IDs appear in the exclusion list.
@@ -255,7 +262,8 @@ class Bank : JBank() {
          * @param ids Identifiers of items to keep in the backpack.
          * @return true if the deposit interaction was performed.
          */
-        fun depositAllExcept(permissive: PermissiveScript, vararg ids: Int) = JBank.depositAllExcept(permissive, *ids)
+        fun depositAllExcept(permissive: PermissiveScript, vararg ids: Int) =
+            JBank.depositAllExcept(permissive, *ids)
 
         /**
          * Deposits all items except those whose names match any exclusion pattern.
@@ -263,7 +271,8 @@ class Bank : JBank() {
          * @param patterns Name patterns describing items to keep.
          * @return true if the deposit interaction was performed.
          */
-        fun depositAllExcept(permissive: PermissiveScript, vararg patterns: Pattern) = JBank.depositAllExcept(permissive, *patterns)
+        fun depositAllExcept(permissive: PermissiveScript, vararg patterns: Pattern) =
+            JBank.depositAllExcept(permissive, *patterns)
 
         /**
          * Deposits a specific item by identifier using the provided option index.
@@ -272,7 +281,8 @@ class Bank : JBank() {
          * @param option Option index to trigger on the component.
          * @return true if the deposit interaction was performed.
          */
-        fun deposit(permissive: PermissiveScript, itemId: Int, option: Int) = JBank.deposit(permissive, itemId, option)
+        fun deposit(permissive: PermissiveScript, itemId: Int, option: Int) =
+            JBank.deposit(permissive, itemId, option)
 
         /**
          * Deposits a named item using a custom string comparison function.
@@ -296,7 +306,8 @@ class Bank : JBank() {
          * @param option Option index to trigger on the component.
          * @return true if the deposit interaction was performed.
          */
-        fun deposit(permissive: PermissiveScript, name: String, option: Int) = JBank.deposit(permissive, name, option)
+        fun deposit(permissive: PermissiveScript, name: String, option: Int) =
+            JBank.deposit(permissive, name, option)
 
         // ---- Presets / vars ----
         /**
@@ -305,7 +316,8 @@ class Bank : JBank() {
          * @param presetNumber Preset slot identifier (1-based in the UI).
          * @return true if the preset load interaction was performed.
          */
-        fun loadPreset(permissive: PermissiveScript, presetNumber: Int) = JBank.loadPreset(permissive, presetNumber)
+        fun loadPreset(permissive: PermissiveScript, presetNumber: Int) =
+            JBank.loadPreset(permissive, presetNumber)
 
         /**
          * Reads a varbit value associated with a specific bank slot.
@@ -313,15 +325,16 @@ class Bank : JBank() {
          * @param varbitId Varbit identifier to read.
          * @return The current varbit value, or 0 when unavailable.
          */
-        fun getVarbitValue(slot: Int, varbitId: Int) = JBank.getVarbitValue(slot, varbitId)
+        fun getVarbitValue(slot: Int, varbitId: Int) =
+            JBank.getVarbitValue(slot, varbitId)
 
         /**
          * Retrieves the index of the last preset loaded this session.
          * @return Preset index recorded by the Java API, or -1 if none was recorded.
          */
-        fun getPreviousLoadedPreset() = JBank.getPreviousLoadedPreset()
+        fun getPreviousLoadedPreset() =
+            JBank.getPreviousLoadedPreset()
 
-        // ---------- Suspend wrappers for convenience ----------
         /**
          * Suspends until the bank has been closed or the timeout elapses.
          *
@@ -329,8 +342,8 @@ class Bank : JBank() {
          * @return true if the bank is no longer open after awaiting.
          */
         suspend fun close(script: SuspendableScript): Boolean {
-            val ok = close()
-            if (ok) script.awaitUntil(5) { !isOpen() }
+            val closeInitiated = close()
+            if (closeInitiated) script.awaitUntil(5) { !isOpen() }
             return !isOpen()
         }
 
@@ -340,9 +353,9 @@ class Bank : JBank() {
          * @return true if the underlying preset load was initiated.
          */
         suspend fun loadLastPreset(script: SuspendableScript): Boolean {
-            val ok = loadLastPreset()
-            if (ok) script.awaitTicks(2)
-            return ok
+            val presetLoaded = loadLastPreset()
+            if (presetLoaded) script.awaitTicks(2)
+            return presetLoaded
         }
 
         /**
@@ -357,9 +370,9 @@ class Bank : JBank() {
             presetNumber: Int,
             permissive: PermissiveScript
         ): Boolean {
-            val ok = loadPreset(permissive, presetNumber)
-            if (ok) script.awaitTicks(2)
-            return ok
+            val presetLoaded = loadPreset(permissive, presetNumber)
+            if (presetLoaded) script.awaitTicks(2)
+            return presetLoaded
         }
 
         /**
@@ -369,10 +382,10 @@ class Bank : JBank() {
          */
         suspend fun depositEquipment(script: SuspendableScript): Boolean {
             logger.info("[Bank] suspend depositEquipment(): begin")
-            val ok = depositEquipment()
-            if (ok) script.awaitTicks(1)
-            logger.info("[Bank] suspend depositEquipment(): end -> {}", ok)
-            return ok
+            val equipmentDeposited = depositEquipment()
+            if (equipmentDeposited) script.awaitTicks(1)
+            logger.info("[Bank] suspend depositEquipment(): end -> {}", equipmentDeposited)
+            return equipmentDeposited
         }
 
         /**
@@ -382,10 +395,10 @@ class Bank : JBank() {
          */
         suspend fun depositBackpack(script: SuspendableScript): Boolean {
             logger.info("[Bank] suspend depositBackpack(): begin")
-            val ok = depositBackpack()
-            if (ok) script.awaitTicks(1)
-            logger.info("[Bank] suspend depositBackpack(): end -> {}", ok)
-            return ok
+            val backpackDeposited = depositBackpack()
+            if (backpackDeposited) script.awaitTicks(1)
+            logger.info("[Bank] suspend depositBackpack(): end -> {}", backpackDeposited)
+            return backpackDeposited
         }
 
         /**
@@ -396,10 +409,10 @@ class Bank : JBank() {
          */
         suspend fun withdrawAll(script: SuspendableScript, name: String): Boolean {
             logger.info("[Bank] suspend withdrawAll(name='{}'): begin", name)
-            val ok = withdrawAll(name)
-            if (ok) script.awaitTicks(1)
-            logger.info("[Bank] suspend withdrawAll(name='{}'): end -> {}", name, ok)
-            return ok
+            val itemWithdrawn = withdrawAll(name)
+            if (itemWithdrawn) script.awaitTicks(1)
+            logger.info("[Bank] suspend withdrawAll(name='{}'): end -> {}", name, itemWithdrawn)
+            return itemWithdrawn
         }
 
         /**
@@ -410,13 +423,12 @@ class Bank : JBank() {
          */
         suspend fun withdrawAll(script: SuspendableScript, id: Int): Boolean {
             logger.info("[Bank] suspend withdrawAll(id={}): begin", id)
-            val ok = withdrawAll(id)
-            if (ok) script.awaitTicks(1)
-            logger.info("[Bank] suspend withdrawAll(id={}): end -> {}", id, ok)
-            return ok
+            val itemWithdrawn = withdrawAll(id)
+            if (itemWithdrawn) script.awaitTicks(1)
+            logger.info("[Bank] suspend withdrawAll(id={}): end -> {}", id, itemWithdrawn)
+            return itemWithdrawn
         }
 
-        // ---------- “Empty box” helpers added ----------
         /**
          * Empties a box-like container (for example bird nests or log boxes) using the provided option and awaits completion.
          * @param script Coroutine-aware script used to await ticks.
@@ -425,9 +437,9 @@ class Bank : JBank() {
          * @return true if the empty interaction was performed.
          */
         suspend fun emptyBox(script: SuspendableScript, boxName: String, option: String): Boolean {
-            val ok = emptyBox(boxName, option)
-            if (ok) script.awaitTicks(2)
-            return ok
+            val boxEmptied = emptyBox(boxName, option)
+            if (boxEmptied) script.awaitTicks(2)
+            return boxEmptied
         }
 
         /**
@@ -436,17 +448,9 @@ class Bank : JBank() {
          * @return true if the component interaction succeeded.
          */
         fun emptyBox(option: String): Boolean {
-            if (!isOpen()) {
-                logger.debug("emptyBox(option='{}'): bank not open", option)
-                return false
-            }
-            val comp = ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()
-            val ok = comp?.let { it.interact(1) > 0 || it.interact(option) > 0 } ?: false
-            logger.debug(
-                "emptyBox(option='{}'): component {} -> {}",
-                option, if (comp != null) "found" else "not-found", ok
-            )
-            return ok
+            if (!isOpen()) return false
+            return ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()
+                ?.let { it.interact(1) > 0 || it.interact(option) > 0 } ?: false
         }
 
         /**
@@ -456,56 +460,34 @@ class Bank : JBank() {
          * @return true if the empty interaction succeeded.
          */
         fun emptyBox(boxName: String, option: String): Boolean {
-            if (!isOpen()) {
-                logger.debug("emptyBox(name='{}', option='{}'): bank not open", boxName, option)
-                return false
-            }
+            if (!isOpen()) return false
+
             return runCatching {
-                val bpItem = Backpack.getItem({ _, h -> h.toString().contains(boxName, true) }, boxName)
-                logger.debug(
-                    "emptyBox(name='{}', option='{}'): backpack item -> {}",
-                    boxName, option, bpItem?.let { "${it.name} (${it.id})" } ?: "null"
-                )
+                val backpackItem = Backpack.getItems().firstOrNull { it.name.contains(boxName, ignoreCase = true) }
 
-                bpItem?.let {
-                    ComponentQuery.newQuery(INTERFACE_INDEX)
-                        .id(COMPONENT_INDEX)
-                        .itemId(it.id)
-                        .results()
-                        .firstOrNull()
-                        ?.takeIf { comp -> comp.interact(1) > 0 || comp.interact(option) > 0 }
-                        ?.also { logger.debug("emptyBox(name='{}'): interacted with component by id -> true", boxName) }
-                        ?.let { return true }
+                backpackItem?.let { item ->
+                    ComponentQuery.newQuery(INTERFACE_INDEX).id(COMPONENT_INDEX).itemId(item.id)
+                        .results().firstOrNull()?.let { comp ->
+                            if (comp.interact(1) > 0 || comp.interact(option) > 0) return true
+                        }
                 }
 
-                ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()?.let { comp ->
-                    if (comp.interact(1) > 0 || comp.interact(option) > 0) {
-                        logger.debug("emptyBox(name='{}'): interacted with component by option -> true", boxName)
-                        return true
-                    }
-                }
+                ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()
+                    ?.let { if (it.interact(1) > 0 || it.interact(option) > 0) return true }
 
-                var fuzzyOk = false
-                ComponentQuery.newQuery(INTERFACE_INDEX).results().forEach { comp ->
-                    comp.options?.forEach { op ->
-                        op?.lowercase()
-                            ?.takeIf { it.contains("empty") && (it.contains("log") || it.contains("nest") || it.contains("box")) }
-                            ?.takeIf { comp.interact(op) > 0 }
-                            ?.also {
-                                logger.debug("emptyBox(name='{}'): fuzzy component option '{}' -> true", boxName, op)
-                                fuzzyOk = true
-                                return@forEach
-                            }
-                    }
-                }
-                if (fuzzyOk) return true
+                if (interactWithEmptyVariant()) return true
 
-                bpItem?.interact(option)
-                logger.debug("emptyBox(name='{}'): fallback backpack interact -> {}", boxName, true)
-                true
-            }.onFailure { t ->
-                logger.warn("emptyBox(name='{}') exception: {}", boxName, t.message)
+                backpackItem?.interact(option) != null
             }.getOrElse { false }
+        }
+
+        private fun interactWithEmptyVariant(): Boolean {
+            val pattern = Regex("empty.*(log|nest|box)", RegexOption.IGNORE_CASE)
+            return ComponentQuery.newQuery(INTERFACE_INDEX).results().any { comp ->
+                comp.options.orEmpty().any { option ->
+                    option != null && pattern.containsMatchIn(option) && comp.interact(option) > 0
+                }
+            }
         }
     }
 }
