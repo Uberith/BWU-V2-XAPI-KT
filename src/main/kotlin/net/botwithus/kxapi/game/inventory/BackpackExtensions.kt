@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 private val logger = LoggerFactory.getLogger(Backpack::class.java)
 
 object BackpackExtensions  {
+    // TODO: Change to extend Backpack.java once Backpack is no longer final in Java
     /**
      * Attempts to interact with [item] using the given [option].
      *
