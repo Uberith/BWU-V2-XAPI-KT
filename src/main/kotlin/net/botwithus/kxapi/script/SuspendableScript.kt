@@ -62,8 +62,6 @@ abstract class SuspendableScript : BwuScript() {
         val resumeTick: Int
     )
 
-    private val logger = LoggerFactory.getLogger(javaClass)
-
     private val pendingDispatches: ArrayDeque<Runnable> = ArrayDeque()
     private val pendingWaits = mutableListOf<WaitRequest>()
 
