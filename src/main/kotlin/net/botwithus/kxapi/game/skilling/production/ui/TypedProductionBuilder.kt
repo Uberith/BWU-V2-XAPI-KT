@@ -9,7 +9,7 @@ import net.botwithus.xapi.script.BwuScript
  */
 abstract class TypedProductionBuilder<T : TypedProductionBuilder<T>> {
     /**
-     * Build the ProductionTypeSelector with the configured parameters.
+     * Build the ProductionManager with the configured parameters.
      * Must be implemented by each typed builder.
      */
     abstract fun build(script: BwuScript): ProductionManager
