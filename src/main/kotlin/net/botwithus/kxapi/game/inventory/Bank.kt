@@ -19,8 +19,8 @@ import net.botwithus.xapi.script.permissive.base.PermissiveScript
 
 private val logger = LoggerFactory.getLogger(JBank::class.java)
 
-private const val INTERFACE_INDEX = 517
-private const val COMPONENT_INDEX = 202
+private val INTERFACE_INDEX = JBank.INTERFACE_INDEX
+private val COMPONENT_INDEX = JBank.COMPONENT_INDEX
 
 /**
  * Import THIS class in callers: net.botwithus.kxapi.game.inventory.Bank
@@ -37,7 +37,7 @@ class Bank : JBank() {
          * @param permissive Script wrapper that is allowed to interact with blocking UI states.
          * @return true when the bank was already open or an open interaction was successfully issued.
          */
-        fun open(permissive: PermissiveScript) = JBank.open(permissive)
+        fun open(permissive: PermissiveScript) = JBank.open()
 
         /**
          * Checks whether the bank widget is currently visible to the local player.
