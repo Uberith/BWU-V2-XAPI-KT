@@ -37,7 +37,7 @@ class Bank : JBank() {
          * @param permissive Script wrapper that is allowed to interact with blocking UI states.
          * @return true when the bank was already open or an open interaction was successfully issued.
          */
-        fun open(permissive: PermissiveScript) = JBank.open(permissive)
+        fun open(permissive: PermissiveScript) = JBank.open()
 
         /**
          * Checks whether the bank widget is currently visible to the local player.
