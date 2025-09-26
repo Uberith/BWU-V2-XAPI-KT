@@ -46,13 +46,13 @@ fun Component.hasOption(option: String): Boolean = options.contains(option)
 fun Component.interactWithOption(option: String): Boolean =
     if (hasOption(option)) interact(option) > 0 else false
 
-fun ComponentQuery.selectItemByName(itemName: String, itemNameProvider: (Int) -> String): Boolean {
-    val targetChild = findChild { child -> itemNameProvider(child.itemId) == itemName }
-    if (targetChild != null) {
-        val buttonId = targetChild.subComponentId - 1
-        return findBySubComponentId(buttonId)?.interactWithOption("Select") == true
+fun ComponentQuery.findItemByName(
+    itemName: String,
+    itemNameProvider: (Int) -> String
+): Component? {
+    return findChild { child ->
+        itemNameProvider(child.itemId).equals(itemName, ignoreCase = true)
     }
-    return false
 }
 
 fun ComponentQuery.interactWithFirstOption(option: String): Boolean =
