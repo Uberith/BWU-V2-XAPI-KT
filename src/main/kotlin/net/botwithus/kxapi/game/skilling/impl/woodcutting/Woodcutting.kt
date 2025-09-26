@@ -199,8 +199,10 @@ class Woodcutting internal constructor(val skilling: Skilling) {
     }
 
     private fun toTitleCase(text: String): String =
-        text.trim().lowercase().split(Regex("""\s+""")).filter { it.isNotEmpty() }
-            .joinToString(" ") { word -> word.replaceFirstChar { ch -> ch.titlecase() } }
+        text.lowercase()
+            .split("\\s+".toRegex())
+            .filter(String::isNotEmpty)
+            .joinToString(" ") { it.replaceFirstChar(Char::titlecase) }
 
     private companion object {
         private val logger = LoggerFactory.getLogger(Woodcutting::class.java)
