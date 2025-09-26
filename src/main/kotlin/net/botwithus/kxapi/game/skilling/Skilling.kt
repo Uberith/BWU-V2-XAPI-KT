@@ -8,7 +8,7 @@ import net.botwithus.xapi.script.BwuScript
  * DSL context for skilling operations.
  * Provides a structured namespace for production-related operations.
  */
-class Skilling(private val script: BwuScript) {
+class Skilling(val script: BwuScript) {
     
     /**
      * Production DSL for creating and configuring production tasks.

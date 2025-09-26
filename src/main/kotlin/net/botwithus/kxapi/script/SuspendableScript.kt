@@ -13,11 +13,15 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import net.botwithus.rs3.client.Client
 import net.botwithus.rs3.entities.LocalPlayer
-import net.botwithus.scripts.Script
+import net.botwithus.kxapi.imgui.ImGuiDSL
+import net.botwithus.kxapi.imgui.ImGuiUI
+import net.botwithus.kxapi.permissive.PermissiveDSL
+import net.botwithus.kxapi.permissive.StateEnum
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 import net.botwithus.ui.workspace.Workspace
 import net.botwithus.xapi.script.BwuScript
 import net.botwithus.xapi.script.ui.interfaces.BuildableUI
-import org.slf4j.LoggerFactory
 import java.util.ArrayDeque
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -34,6 +38,58 @@ import kotlin.coroutines.resume
  * multiple suspensions can coexist safely.
  */
 abstract class SuspendableScript : BwuScript() {
+
+    /**
+     * Marker for suspendable scripts that expose a permissive state machine. Implementers can supply the enum
+     * backing the machine and optionally override the defaults to customise behaviour.
+     */
+    interface StateMachine<State> where State : Enum<State>, State : StateEnum {
+        val enableStateMachine: Boolean get() = true
+        val defaultState: State? get() = null
+        fun stateEnumClass(): Class<State>? = null
+    }
+
+    private val stateInstances = mutableMapOf<Enum<*>, PermissiveDSL<*>>()
+    private var stateMachineReady = false
+
+    private var configUi: ImGuiUI? = null
+    private var workspaceDrawer: (suspend Workspace.() -> Unit)? = null
+    private var saveHandler: (JsonObject.() -> Unit)? = null
+    private var loadHandler: (JsonObject.() -> Unit)? = null
+
+    /**
+     * Controls whether the permissive state machine should boot automatically. Defaults to `false` unless the script
+     * implements [StateMachine].
+     */
+    protected open val enableStateMachine: Boolean
+        get() = (this as? StateMachine<*>)?.enableStateMachine ?: false
+
+    /**
+     * Override to customise the initial state. Defaults to the enum's first constant.
+     */
+    protected open val defaultStateEnum: Enum<*>?
+        get() = (this as? StateMachine<*>)?.defaultState as? Enum<*>
+
+    /**
+     * Override to provide the enum backing the state machine. The default implementation attempts to resolve the
+     * generic parameter declared on [StateMachine].
+     */
+    protected open fun stateEnumClass(): Class<out Enum<*>>? {
+        (this as? StateMachine<*>)?.stateEnumClass()?.let { return it }
+        return resolveStateClassFromHierarchy()
+    }
+
+    /**
+     * Provides read-only access to the active permissive state instance, if a state machine is configured.
+     */
+    protected val activeState: PermissiveDSL<*>?
+        get() {
+            if (!stateMachineReady) return null
+            val activeName = runCatching { currentState.name }.getOrNull() ?: return null
+            return stateInstances.entries.firstOrNull { (enumConst, _) ->
+                (enumConst as? StateEnum)?.description == activeName
+            }?.value
+        }
 
     /** Snapshot capturing minimal player activity information for idle checks. */
     data class PlayerActivitySnapshot(
@@ -105,20 +161,30 @@ abstract class SuspendableScript : BwuScript() {
      * functions to pause between actions. The default implementation calls [awaitTicks] after each loop, so most
      * scripts simply perform their logic here.
      */
-    abstract suspend fun onLoop()
+    protected open suspend fun onTick() {}
 
+    open suspend fun onLoop() {
+        onTick()
+    }
 
     protected open suspend fun onDrawConfigSuspend(workspace: Workspace) {}
 
-    protected open suspend fun buildUI(): BuildableUI? = null
+    protected open suspend fun buildUI(): BuildableUI? = configUi
 
-    protected open suspend fun saveData(data: JsonObject) {}
+    protected open fun saveData(data: JsonObject) {
+        saveHandler?.invoke(data)
+    }
 
-    protected open suspend fun loadData(data: JsonObject) {}
+    protected open fun loadData(data: JsonObject) {
+        loadHandler?.invoke(data)
+    }
 
     override fun onDrawConfig(p0: Workspace?) {
         if (p0 != null) {
-            scriptScope.launch { onDrawConfigSuspend(p0) }
+            scriptScope.launch {
+                workspaceDrawer?.invoke(p0)
+                onDrawConfigSuspend(p0)
+            }
         }
     }
 
@@ -130,16 +196,22 @@ abstract class SuspendableScript : BwuScript() {
         return ui
     }
 
-    override fun savePersistentData(p0: JsonObject?) {
-        if (p0 != null) {
-            scriptScope.launch { saveData(p0) }
-        }
+    override fun savePersistentData(obj: JsonObject?) {
+        if (obj != null) { saveData(obj) }
     }
 
-    override fun loadPersistentData(p0: JsonObject?) {
-        if (p0 != null) {
-            scriptScope.launch { loadData(p0) }
+    override fun loadPersistentData(obj: JsonObject?) {
+        if (obj != null) { loadData(obj) }
+    }
+
+    override fun onInitialize() {
+        super.onInitialize()
+        stateInstances.clear()
+        stateMachineReady = false
+        if (enableStateMachine) {
+            setupStateMachine()
         }
+        onScriptReady()
     }
 
     /**
@@ -161,11 +233,159 @@ abstract class SuspendableScript : BwuScript() {
     override fun onActivation() {
         resetCancellationState()
         super.onActivation()
+        onScriptActivated()
     }
 
     override fun onDeactivation() {
+        onScriptDeactivated()
         cancelScript(CancellationException("Script deactivated"))
         super.onDeactivation()
+    }
+
+    protected open fun onScriptReady() {}
+
+    protected open fun onScriptActivated() {}
+
+    protected open fun onScriptDeactivated() {}
+
+    @Suppress("UNCHECKED_CAST")
+    protected open fun <State> switchToState(state: State) where State : Enum<State>, State : StateEnum {
+        switchToStateInternal(state as Enum<*>, announce = true)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    protected open fun <State> getState(state: State): PermissiveDSL<*>? where State : Enum<State>, State : StateEnum {
+        return instantiateState(state as Enum<*>)
+    }
+
+    protected open fun <State> isStateActive(state: State): Boolean where State : Enum<State>, State : StateEnum {
+        if (!stateMachineReady) return false
+        val activeName = runCatching { currentState.name }.getOrNull() ?: return false
+        return activeName == state.description
+    }
+
+    protected fun configPanel(builder: ImGuiDSL.() -> Unit) {
+        configUi = object : ImGuiUI() {
+            override fun build(): ImGuiDSL.() -> Unit = builder
+        }
+    }
+
+    protected fun configPanel(ui: ImGuiUI) {
+        configUi = ui
+    }
+
+    protected fun workspacePanel(block: suspend Workspace.() -> Unit) {
+        workspaceDrawer = block
+    }
+
+    protected fun onSaveState(block: JsonObject.() -> Unit) {
+        saveHandler = block
+    }
+
+    protected fun onLoadState(block: JsonObject.() -> Unit) {
+        loadHandler = block
+    }
+
+    protected fun persistentState(
+        onLoad: JsonObject.() -> Unit,
+        onSave: JsonObject.() -> Unit
+    ) {
+        loadHandler = onLoad
+        saveHandler = onSave
+    }
+
+    private fun setupStateMachine() {
+        if (stateMachineReady) return
+        val enumClass = stateEnumClass() ?: run {
+            logger.warn("State machine enabled but no enum type detected on {}", javaClass.simpleName)
+            return
+        }
+
+        val enumConstants = enumClass.enumConstants as? Array<out Enum<*>> ?: emptyArray()
+        val states = enumConstants.mapNotNull { instantiateState(it) }.toTypedArray()
+        if (states.isEmpty()) {
+            logger.warn("State machine enabled but no state instances could be created for {}", javaClass.simpleName)
+            return
+        }
+
+        initStates(*states)
+        stateMachineReady = true
+
+        val initial = defaultStateEnum ?: enumConstants.firstOrNull()
+        if (initial != null) {
+            switchToStateInternal(initial, announce = false)
+        }
+    }
+
+    private fun instantiateState(enumConst: Enum<*>): PermissiveDSL<*>? {
+        stateInstances[enumConst]?.let { return it }
+        val descriptor = enumConst as? StateEnum ?: run {
+            logger.warn("State {} does not implement StateEnum on {}", enumConst.name, javaClass.simpleName)
+            return null
+        }
+        val stateClass = descriptor.classz
+        val instance = runCatching {
+            val constructor = stateClass.java.getDeclaredConstructor(this::class.java, String::class.java)
+            constructor.isAccessible = true
+            constructor.newInstance(this, descriptor.description)
+        }.onFailure { error ->
+            logger.error(
+                "Failed to construct state {} ({}): {}",
+                enumConst.name,
+                stateClass.qualifiedName,
+                error.message,
+                error
+            )
+        }.getOrNull()
+        if (instance != null) {
+            stateInstances[enumConst] = instance
+        }
+        return instance
+    }
+
+    private fun switchToStateInternal(state: Enum<*>, announce: Boolean) {
+        if (!stateMachineReady) {
+            instantiateState(state)
+            return
+        }
+        val instance = instantiateState(state) ?: return
+        val description = stateDescription(state)
+        setCurrentState(description)
+        status = if (announce) {
+            "Switched to $description"
+        } else {
+            "Active state: $description"
+        }
+        logger.debug("{} transitioned to state {}", javaClass.simpleName, instance.name)
+    }
+
+    private fun stateDescription(enumConst: Enum<*>): String =
+        (enumConst as? StateEnum)?.description ?: enumConst.name
+
+    private fun resolveStateClassFromHierarchy(): Class<out Enum<*>>? {
+        var current: Class<*>? = this::class.java
+        while (current != null) {
+            current.genericInterfaces.forEach { type ->
+                resolveStateClassFromType(type)?.let { return it }
+            }
+            resolveStateClassFromType(current.genericSuperclass)?.let { return it }
+            current = current.superclass
+        }
+        return null
+    }
+
+    private fun resolveStateClassFromType(type: Type?): Class<out Enum<*>>? {
+        if (type !is ParameterizedType) return null
+        val raw = (type.rawType as? Class<*>) ?: return null
+        if (raw != StateMachine::class.java) return null
+        val actual = type.actualTypeArguments.firstOrNull()
+        val enumClass = actual as? Class<*>
+        return if (enumClass != null && Enum::class.java.isAssignableFrom(enumClass)) {
+            @Suppress("UNCHECKED_CAST")
+            enumClass as Class<out Enum<*>>
+        } else {
+            null
+        }
     }
 
     /**
