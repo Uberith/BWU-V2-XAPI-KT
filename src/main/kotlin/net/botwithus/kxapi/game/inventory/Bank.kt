@@ -19,8 +19,8 @@ import net.botwithus.xapi.script.permissive.base.PermissiveScript
 
 private val logger = LoggerFactory.getLogger(JBank::class.java)
 
-private const val INTERFACE_INDEX = 517
-private const val COMPONENT_INDEX = 202
+private val INTERFACE_INDEX = JBank.INTERFACE_INDEX
+private val COMPONENT_INDEX = JBank.COMPONENT_INDEX
 
 /**
  * Import THIS class in callers: net.botwithus.kxapi.game.inventory.Bank

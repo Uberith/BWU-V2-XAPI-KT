@@ -12,8 +12,6 @@ import net.botwithus.xapi.script.BwuScript
  * Provides a structured namespace for production-related operations.
  */
 class Skilling(val script: BwuScript) {
-
-
     /**
      * Generic typed production DSL that works with any TypedProductionBuilder.
      * 
