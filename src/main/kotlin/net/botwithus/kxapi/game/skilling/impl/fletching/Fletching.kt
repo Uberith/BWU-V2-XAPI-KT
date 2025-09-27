@@ -2,8 +2,8 @@ package net.botwithus.kxapi.game.skilling.impl.fletching
 
 import net.botwithus.kxapi.game.skilling.Skilling
 import net.botwithus.kxapi.game.skilling.production.ProductionResult
-import net.botwithus.kxapi.game.skilling.production.ProductionTypeSelector
-import net.botwithus.kxapi.game.skilling.production.asTypeSelector
+import net.botwithus.kxapi.game.skilling.production.ProductionManager
+import net.botwithus.kxapi.game.skilling.production.ProductionMessage
 import net.botwithus.kxapi.game.skilling.skilling
 import net.botwithus.kxapi.script.SuspendableScript
 import org.slf4j.LoggerFactory
@@ -12,15 +12,15 @@ import org.slf4j.LoggerFactory
  * Convenience helpers around the RuneScape 3 Fletching production interface.
  *
  * The API mirrors the ergonomics of the woodcutting helpers: it exposes strongly typed recipes, query utilities
- * and wrappers that hand back a [ProductionTypeSelector] ready to interact with interface 1371.
+ * and wrappers that hand back a [ProductionManager] ready to interact with interface 1371.
  */
 class Fletching internal constructor(private val skilling: Skilling) {
 
     /**
-     * Creates a production selector configured for the supplied [product] but does not start the interaction.
-     * The caller can further customise the selector before invoking [ProductionTypeSelector.produceItem].
+     * Creates a production manager configured for the supplied [product] but does not start the interaction.
+     * The caller can further customise the manager before invoking [ProductionManager.produceItem].
      */
-    fun produce(product: FletchingProduct): ProductionTypeSelector {
+    fun produce(product: FletchingProduct): ProductionManager {
         logger.debug(
             "produce(product='{}', category='{}')",
             product.displayName,
@@ -29,25 +29,25 @@ class Fletching internal constructor(private val skilling: Skilling) {
         return skilling.production {
             itemName(product.itemName)
             category(product.category.interfaceName)
-        }.asTypeSelector()
+        }
     }
 
     /**
-     * Convenience wrapper that immediately calls [ProductionTypeSelector.produceItem] for the given [product].
+     * Convenience wrapper that immediately calls [ProductionManager.produceItem] for the given [product].
      */
     fun produce(
         product: FletchingProduct,
         onFinished: (Double) -> Unit = { _ -> },
-        onProgress: (ProductionResult, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+        onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
     ) {
         produce(product).produceItem(onFinished, onProgress)
     }
 
     /**
-     * Creates a production selector using a raw [category] and [itemName], letting scripts handle items that are
+     * Creates a production manager using a raw [category] and [itemName], letting scripts handle items that are
      * not yet represented as a [FletchingProduct].
      */
-    fun produce(category: FletchingCategory, itemName: String): ProductionTypeSelector {
+    fun produce(category: FletchingCategory, itemName: String): ProductionManager {
         val trimmedItem = itemName.trim()
         logger.debug(
             "produce(category='{}', item='{}')",
@@ -57,23 +57,23 @@ class Fletching internal constructor(private val skilling: Skilling) {
         return skilling.production {
             itemName(trimmedItem)
             category(category.interfaceName)
-        }.asTypeSelector()
+        }
     }
 
     /**
      * Low-level escape hatch when only the raw interface label is known.
      */
-    fun produce(categoryName: String, itemName: String): ProductionTypeSelector {
+    fun produce(categoryName: String, itemName: String): ProductionManager {
         val trimmedCategory = categoryName.trim()
         val trimmedItem = itemName.trim()
         logger.debug("produce(categoryName='{}', item='{}')", trimmedCategory, trimmedItem)
-        return skilling.produce(trimmedItem, trimmedCategory).asTypeSelector()
+        return skilling.produce(trimmedItem, trimmedCategory)
     }
 
     /**
-     * Attempts to resolve [name] against the canonical recipe list and returns a ready selector if successful.
+     * Attempts to resolve [name] against the canonical recipe list and returns a ready manager if successful.
      */
-    fun produce(name: String): ProductionTypeSelector? = resolveProduct(name)?.let(::produce)
+    fun produce(name: String): ProductionManager? = resolveProduct(name)?.let(::produce)
 
     /**
      * Resolves [name] and, if successful, immediately starts production with the provided callbacks.
@@ -81,7 +81,7 @@ class Fletching internal constructor(private val skilling: Skilling) {
     fun produce(
         name: String,
         onFinished: (Double) -> Unit = { _ -> },
-        onProgress: (ProductionResult, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+        onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
     ) {
         val product = resolveProduct(name)
             ?: error("Unknown fletching product '$name'")
@@ -164,14 +164,14 @@ val Skilling.fletching: Fletching
 fun Skilling.fletch(
     product: FletchingProduct,
     onFinished: (Double) -> Unit = { _ -> },
-    onProgress: (ProductionResult, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+    onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
 ) = fletching.produce(product, onFinished, onProgress)
 
 /** Starts an ad-hoc recipe resolved by name. */
 fun Skilling.fletch(
     name: String,
     onFinished: (Double) -> Unit = { _ -> },
-    onProgress: (ProductionResult, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+    onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
 ) = fletching.produce(name, onFinished, onProgress)
 
 /** Starts a recipe by explicitly specifying the interface category. */
@@ -179,7 +179,7 @@ fun Skilling.fletch(
     category: FletchingCategory,
     itemName: String,
     onFinished: (Double) -> Unit = { _ -> },
-    onProgress: (ProductionResult, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+    onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
 ) = fletching.produce(category, itemName).produceItem(onFinished, onProgress)
 
 /**
@@ -188,18 +188,18 @@ fun Skilling.fletch(
 fun SuspendableScript.fletch(
     product: FletchingProduct,
     onFinished: (Double) -> Unit = { _ -> },
-    onProgress: (ProductionResult, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+    onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
 ) = this.skilling.fletch(product, onFinished, onProgress)
 
 fun SuspendableScript.fletch(
     name: String,
     onFinished: (Double) -> Unit = { _ -> },
-    onProgress: (ProductionResult, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+    onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
 ) = this.skilling.fletch(name, onFinished, onProgress)
 
 fun SuspendableScript.fletch(
     category: FletchingCategory,
     itemName: String,
     onFinished: (Double) -> Unit = { _ -> },
-    onProgress: (ProductionResult, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+    onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
 ) = this.skilling.fletching.produce(category, itemName).produceItem(onFinished, onProgress)
