@@ -125,6 +125,9 @@ abstract class SuspendableScript : BwuScript() {
     private val scriptDispatcher = object : CoroutineDispatcher() {
         override fun dispatch(context: CoroutineContext, block: Runnable) {
             pendingDispatches.addLast(block)
+            if (logger.isDebugEnabled) {
+                logger.debug("{} queued coroutine dispatch", javaClass.simpleName)
+            }
         }
     }
 
@@ -143,6 +146,9 @@ abstract class SuspendableScript : BwuScript() {
     protected val scriptScope: CoroutineScope
         get() {
             if (!scopeJob.isActive) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("{} recreating coroutine scope", javaClass.simpleName)
+                }
                 scopeJob = SupervisorJob()
                 internalScope = CoroutineScope(scopeJob + scriptDispatcher + exceptionHandler)
             }
@@ -206,6 +212,7 @@ abstract class SuspendableScript : BwuScript() {
 
     override fun onInitialize() {
         super.onInitialize()
+        logger.debug("{} initializing (stateMachineEnabled={})", javaClass.simpleName, enableStateMachine)
         stateInstances.clear()
         stateMachineReady = false
         if (enableStateMachine) {
@@ -231,12 +238,14 @@ abstract class SuspendableScript : BwuScript() {
     }
 
     override fun onActivation() {
+        logger.debug("{} activating", javaClass.simpleName)
         resetCancellationState()
         super.onActivation()
         onScriptActivated()
     }
 
     override fun onDeactivation() {
+        logger.debug("{} deactivating", javaClass.simpleName)
         onScriptDeactivated()
         cancelScript(CancellationException("Script deactivated"))
         super.onDeactivation()
@@ -268,22 +277,27 @@ abstract class SuspendableScript : BwuScript() {
         configUi = object : ImGuiUI() {
             override fun build(): ImGuiDSL.() -> Unit = builder
         }
+        logger.debug("{} registered config panel builder", javaClass.simpleName)
     }
 
     protected fun configPanel(ui: ImGuiUI) {
         configUi = ui
+        logger.debug("{} registered config panel", javaClass.simpleName)
     }
 
     protected fun workspacePanel(block: suspend Workspace.() -> Unit) {
         workspaceDrawer = block
+        logger.debug("{} registered workspace panel", javaClass.simpleName)
     }
 
     protected fun onSaveState(block: JsonObject.() -> Unit) {
         saveHandler = block
+        logger.debug("{} registered save-state handler", javaClass.simpleName)
     }
 
     protected fun onLoadState(block: JsonObject.() -> Unit) {
         loadHandler = block
+        logger.debug("{} registered load-state handler", javaClass.simpleName)
     }
 
     protected fun persistentState(
@@ -292,10 +306,14 @@ abstract class SuspendableScript : BwuScript() {
     ) {
         loadHandler = onLoad
         saveHandler = onSave
+        logger.debug("{} registered persistent state handlers", javaClass.simpleName)
     }
 
     private fun setupStateMachine() {
-        if (stateMachineReady) return
+        if (stateMachineReady) {
+            logger.debug("{} state machine already initialised", javaClass.simpleName)
+            return
+        }
         val enumClass = stateEnumClass() ?: run {
             logger.warn("State machine enabled but no enum type detected on {}", javaClass.simpleName)
             return
@@ -310,15 +328,22 @@ abstract class SuspendableScript : BwuScript() {
 
         initStates(*states)
         stateMachineReady = true
+        logger.debug("{} initialised state machine with {} state(s)", javaClass.simpleName, states.size)
 
         val initial = defaultStateEnum ?: enumConstants.firstOrNull()
         if (initial != null) {
+            logger.debug("{} resolved initial state {}", javaClass.simpleName, stateDescription(initial))
             switchToStateInternal(initial, announce = false)
+        } else {
+            logger.debug("{} did not resolve an initial state", javaClass.simpleName)
         }
     }
 
     private fun instantiateState(enumConst: Enum<*>): PermissiveDSL<*>? {
-        stateInstances[enumConst]?.let { return it }
+        stateInstances[enumConst]?.let {
+            logger.debug("{} using cached state {}", javaClass.simpleName, enumConst.name)
+            return it
+        }
         val descriptor = enumConst as? StateEnum ?: run {
             logger.warn("State {} does not implement StateEnum on {}", enumConst.name, javaClass.simpleName)
             return null
@@ -339,16 +364,28 @@ abstract class SuspendableScript : BwuScript() {
         }.getOrNull()
         if (instance != null) {
             stateInstances[enumConst] = instance
+            logger.debug(
+                "{} instantiated state {} ({})",
+                javaClass.simpleName,
+                enumConst.name,
+                stateClass.qualifiedName
+            )
+        } else {
+            logger.warn("State {} could not be instantiated for {}", enumConst.name, javaClass.simpleName)
         }
         return instance
     }
 
     private fun switchToStateInternal(state: Enum<*>, announce: Boolean) {
         if (!stateMachineReady) {
+            logger.debug("{} requested state {} before state machine ready", javaClass.simpleName, state.name)
             instantiateState(state)
             return
         }
-        val instance = instantiateState(state) ?: return
+        val instance = instantiateState(state) ?: run {
+            logger.warn("State {} could not be activated on {}", state.name, javaClass.simpleName)
+            return
+        }
         val description = stateDescription(state)
         setCurrentState(description)
         status = if (announce) {
@@ -396,7 +433,10 @@ abstract class SuspendableScript : BwuScript() {
      * @throws CancellationException If the script has been cancelled.
      */
     suspend fun awaitTicks(ticks: Int) {
-        require(ticks >= 0) { "ticks must be non-negative" }
+        if (ticks < 0) {
+            logger.error("awaitTicks received negative tick count {} on {}", ticks, javaClass.simpleName)
+            throw IllegalArgumentException("ticks must be non-negative")
+        }
         ensureActive()
         suspendCancellableCoroutine { cont ->
             if (isCancelled) {
@@ -404,6 +444,9 @@ abstract class SuspendableScript : BwuScript() {
                 return@suspendCancellableCoroutine
             }
             val resumeTick = Client.getServerTick() + ticks
+            if (logger.isDebugEnabled) {
+                logger.debug("{} scheduling suspension for {} tick(s) (resume @ {})", javaClass.simpleName, ticks, resumeTick)
+            }
             val request = WaitRequest(cont, resumeTick)
             pendingWaits.add(request)
             cont.invokeOnCancellation { pendingWaits.remove(request) }
@@ -420,15 +463,33 @@ abstract class SuspendableScript : BwuScript() {
      * @throws CancellationException If the script has been cancelled.
      */
     suspend fun awaitUntil(timeout: Int = 5, condition: () -> Boolean): Boolean {
-        require(timeout >= 0) { "timeout must be non-negative" }
+        if (timeout < 0) {
+            logger.error("awaitUntil received negative timeout {} on {}", timeout, javaClass.simpleName)
+            throw IllegalArgumentException("timeout must be non-negative")
+        }
         ensureActive()
 
-        if (condition()) return true
-        val deadline = Client.getServerTick() + timeout
+        if (condition()) {
+            logger.debug("{} condition satisfied immediately in awaitUntil", javaClass.simpleName)
+            return true
+        }
+        val startTick = Client.getServerTick()
+        val deadline = startTick + timeout
+        if (logger.isDebugEnabled) {
+            logger.debug("{} awaiting condition for up to {} tick(s)", javaClass.simpleName, timeout)
+        }
         while (Client.getServerTick() < deadline) {
             awaitTicks(1)
             ensureActive()
-            if (condition()) return true
+            if (condition()) {
+                logger.debug("{} condition satisfied after {} tick(s)", javaClass.simpleName, Client.getServerTick() - startTick)
+                return true
+            }
+        }
+        if (timeout > 0) {
+            logger.warn("{} awaitUntil timed out after {} tick(s)", javaClass.simpleName, timeout)
+        } else if (logger.isDebugEnabled) {
+            logger.debug("{} awaitUntil timed out with zero timeout", javaClass.simpleName)
         }
         return false
     }
@@ -461,18 +522,29 @@ abstract class SuspendableScript : BwuScript() {
      * @throws CancellationException If the script has been cancelled.
      */
     suspend fun awaitIdleState(timeout: Int = 10, includeMovement: Boolean = true): IdleAwaitResult {
-        require(timeout >= 0) { "timeout must be non-negative" }
+        if (timeout < 0) {
+            logger.error("awaitIdleState received negative timeout {} on {}", timeout, javaClass.simpleName)
+            throw IllegalArgumentException("timeout must be non-negative")
+        }
         ensureActive()
 
-        val deadline = Client.getServerTick() + timeout
+        val startTick = Client.getServerTick()
+        val deadline = startTick + timeout
+        if (logger.isDebugEnabled) {
+            logger.debug("{} awaiting player idle for up to {} tick(s) (includeMovement={})", javaClass.simpleName, timeout, includeMovement)
+        }
         while (true) {
             val snapshot = capturePlayerActivity()
             val animationIdle = snapshot.isAnimationIdle
             val movementIdle = !includeMovement || snapshot.isMovementIdle
             if (animationIdle && movementIdle) {
+                val waited = (snapshot.captureTick - startTick).coerceAtLeast(0)
+                logger.debug("{} detected idle after {} tick(s)", javaClass.simpleName, waited)
                 return IdleAwaitResult.Idle(snapshot)
             }
             if (Client.getServerTick() >= deadline) {
+                val waited = (deadline - startTick).coerceAtLeast(0)
+                logger.warn("{} idle wait timed out after {} tick(s) (animationActive={}, movementActive={})", javaClass.simpleName, waited, !animationIdle, includeMovement && !snapshot.isMovementIdle)
                 return IdleAwaitResult.Timeout(
                     snapshot = snapshot,
                     animationActive = !animationIdle,
@@ -509,6 +581,9 @@ abstract class SuspendableScript : BwuScript() {
      */
     protected fun cancelScript(cause: CancellationException = CancellationException("Script cancelled")) {
         if (isCancelled) return
+        if (logger.isDebugEnabled) {
+            logger.debug("{} cancelling script ({})", javaClass.simpleName, cause.message ?: "no message")
+        }
         isCancelled = true
         cancellationCause = cause
 
@@ -538,6 +613,7 @@ abstract class SuspendableScript : BwuScript() {
     /** Lazily starts the main script coroutine when the runtime first ticks or after a restart. */
     private fun ensureMainCoroutine() {
         if (mainJob?.isActive == true || isCancelled) return
+        logger.debug("{} starting main coroutine", javaClass.simpleName)
         mainJob = scriptScope.launch(block = coroutineBlock)
     }
 
@@ -555,6 +631,10 @@ abstract class SuspendableScript : BwuScript() {
     /** Runs queued coroutine continuations and tasks until the queue is empty or the script cancels. */
     private fun drainDispatchQueue() {
         if (pendingDispatches.isEmpty()) return
+        val queued = pendingDispatches.size
+        if (logger.isDebugEnabled) {
+            logger.debug("{} draining {} dispatch task(s)", javaClass.simpleName, queued)
+        }
         while (pendingDispatches.isNotEmpty() && !isCancelled) {
             pendingDispatches.removeFirst().run()
         }
@@ -566,6 +646,9 @@ abstract class SuspendableScript : BwuScript() {
         while (true) {
             val ready = pendingWaits.filter { currentTick >= it.resumeTick }
             if (ready.isEmpty() || isCancelled) return
+            if (logger.isDebugEnabled) {
+                logger.debug("{} resuming {} waiter(s) at tick {}", javaClass.simpleName, ready.size, currentTick)
+            }
             ready.forEach { request ->
                 pendingWaits.remove(request)
                 request.continuation.resume(Unit)
@@ -580,6 +663,7 @@ abstract class SuspendableScript : BwuScript() {
 
     /** Clears cancellation state when the script activates so new runs start with a clean slate. */
     private fun resetCancellationState() {
+        logger.debug("{} resetting cancellation state", javaClass.simpleName)
         isCancelled = false
         cancellationCause = null
         pendingWaits.clear()

@@ -25,9 +25,27 @@ class Woodcutting internal constructor(val skilling: Skilling) {
 
     fun chop(name: String): TreeChopRequest = chop().name(name.trim()).build()
 
-    fun chop(target: SceneObject): Boolean {
-        logger.debug("chop(target): name='{}', typeId={}", target.name, target.typeId)
-        return interact(target)
+    fun chop(target: SceneObject): Boolean = chopInternal(target, allowFallback = true)
+
+    private fun chopInternal(target: SceneObject, allowFallback: Boolean): Boolean {
+        val name = target.name ?: "<unknown>"
+        logger.debug("chop(target): name='{}', typeId={}", name, target.typeId)
+        if (!isInteractable(target)) {
+            logger.debug("chop(target): '{}' not interactable (hidden={}, options={})", name, isHidden(target), target.options)
+            return if (allowFallback) tryFallback(target) else false
+        }
+
+        val success = interact(target)
+        if (success) {
+            return true
+        }
+
+        if (!allowFallback) {
+            return false
+        }
+
+        logger.debug("chop(target): interaction failed for '{}', searching replacement", name)
+        return tryFallback(target)
     }
 
     fun nearest(type: TreeType): SceneObject? {
@@ -169,6 +187,41 @@ class Woodcutting internal constructor(val skilling: Skilling) {
         private fun exactNamePattern(name: String): Pattern =
             Pattern.compile("^" + Pattern.quote(name) + "$", Pattern.CASE_INSENSITIVE)
     }
+
+    private fun tryFallback(original: SceneObject): Boolean {
+        val replacement = locateReplacement(original) ?: run {
+            logger.debug("tryFallback: no alternative tree found for '{}'", original.name ?: "<unknown>")
+            return false
+        }
+        logger.debug("tryFallback: switching from '{}' (typeId={}) to '{}' (typeId={})", original.name, original.typeId, replacement.name, replacement.typeId)
+        return chopInternal(replacement, allowFallback = false)
+    }
+
+    private fun locateReplacement(original: SceneObject): SceneObject? {
+        val name = original.name
+        val candidates = mutableListOf<SceneObject?>()
+        if (!name.isNullOrBlank()) {
+            resolveTreeType(name)?.let { candidates += nearest(it) }
+            candidates += nearest(name)
+        }
+        candidates += nearest()
+        return candidates
+            .filterNotNull()
+            .firstOrNull { candidate ->
+                candidate !== original && isInteractable(candidate)
+            }
+    }
+
+    private fun isInteractable(obj: SceneObject): Boolean {
+        if (isHidden(obj)) return false
+        val options = obj.options ?: return false
+        return options.any { option ->
+            option != null && PREFERRED_ACTIONS.any { pref -> pref.equals(option, ignoreCase = true) }
+        }
+    }
+
+    private fun isHidden(obj: SceneObject): Boolean =
+        runCatching { obj.isHidden }.getOrElse { false }
 
     private fun treeQuery() = SceneObjectQuery.newQuery().hidden(false)
 
