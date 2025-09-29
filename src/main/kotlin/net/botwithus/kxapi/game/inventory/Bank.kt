@@ -334,7 +334,6 @@ class Bank : JBank() {
          */
         fun getPreviousLoadedPreset() =
             JBank.getPreviousLoadedPreset()
-
         /**
          * Suspends until the bank has been closed or the timeout elapses.
          *
@@ -342,8 +341,8 @@ class Bank : JBank() {
          * @return true if the bank is no longer open after awaiting.
          */
         suspend fun close(script: SuspendableScript): Boolean {
-            val closeInitiated = close()
-            if (closeInitiated) script.awaitUntil(5) { !isOpen() }
+            val ok = close()
+            if (ok) script.awaitUntil(5) { !isOpen() }
             return !isOpen()
         }
 
@@ -423,10 +422,10 @@ class Bank : JBank() {
          */
         suspend fun withdrawAll(script: SuspendableScript, id: Int): Boolean {
             logger.info("[Bank] suspend withdrawAll(id={}): begin", id)
-            val itemWithdrawn = withdrawAll(id)
-            if (itemWithdrawn) script.awaitTicks(1)
-            logger.info("[Bank] suspend withdrawAll(id={}): end -> {}", id, itemWithdrawn)
-            return itemWithdrawn
+            val ok = withdrawAll(id)
+            if (ok) script.awaitTicks(1)
+            logger.info("[Bank] suspend withdrawAll(id={}): end -> {}", id, ok)
+            return ok
         }
 
         /**
@@ -437,9 +436,9 @@ class Bank : JBank() {
          * @return true if the empty interaction was performed.
          */
         suspend fun emptyBox(script: SuspendableScript, boxName: String, option: String): Boolean {
-            val boxEmptied = emptyBox(boxName, option)
-            if (boxEmptied) script.awaitTicks(2)
-            return boxEmptied
+            val ok = emptyBox(boxName, option)
+            if (ok) script.awaitTicks(2)
+            return ok
         }
 
         /**
@@ -448,9 +447,17 @@ class Bank : JBank() {
          * @return true if the component interaction succeeded.
          */
         fun emptyBox(option: String): Boolean {
-            if (!isOpen()) return false
-            return ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()
-                ?.let { it.interact(1) > 0 || it.interact(option) > 0 } ?: false
+            if (!isOpen()) {
+                logger.info("[Bank] emptyBox(option='{}'): bank not open", option)
+                return false
+            }
+            val comp = ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()
+            val ok = comp?.let { it.interact(1) > 0 || it.interact(option) > 0 } ?: false
+            logger.info(
+                "[Bank] emptyBox(option='{}'): component {} -> {}",
+                option, if (comp != null) "found" else "not-found", ok
+            )
+            return ok
         }
 
         /**
@@ -460,34 +467,56 @@ class Bank : JBank() {
          * @return true if the empty interaction succeeded.
          */
         fun emptyBox(boxName: String, option: String): Boolean {
-            if (!isOpen()) return false
-
-            return runCatching {
-                val backpackItem = Backpack.getItems().firstOrNull { it.name.contains(boxName, ignoreCase = true) }
-
-                backpackItem?.let { item ->
-                    ComponentQuery.newQuery(INTERFACE_INDEX).id(COMPONENT_INDEX).itemId(item.id)
-                        .results().firstOrNull()?.let { comp ->
-                            if (comp.interact(1) > 0 || comp.interact(option) > 0) return true
-                        }
-                }
-
-                ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()
-                    ?.let { if (it.interact(1) > 0 || it.interact(option) > 0) return true }
-
-                if (interactWithEmptyVariant()) return true
-
-                backpackItem?.interact(option) != null
-            }.getOrElse { false }
-        }
-
-        private fun interactWithEmptyVariant(): Boolean {
-            val pattern = Regex("empty.*(log|nest|box)", RegexOption.IGNORE_CASE)
-            return ComponentQuery.newQuery(INTERFACE_INDEX).results().any { comp ->
-                comp.options.orEmpty().any { option ->
-                    option != null && pattern.containsMatchIn(option) && comp.interact(option) > 0
-                }
+            if (!isOpen()) {
+                logger.info("[Bank] emptyBox(name='{}', option='{}'): bank not open", boxName, option)
+                return false
             }
+            return runCatching {
+                val bpItem = Backpack.getItem({ _, h -> h.toString().contains(boxName, true) }, boxName)
+                logger.info(
+                    "[Bank] emptyBox(name='{}', option='{}'): backpack item -> {}",
+                    boxName, option, bpItem?.let { "${it.name} (${it.id})" } ?: "null"
+                )
+
+                bpItem?.let {
+                    ComponentQuery.newQuery(INTERFACE_INDEX)
+                        .id(COMPONENT_INDEX)
+                        .itemId(it.id)
+                        .results()
+                        .firstOrNull()
+                        ?.takeIf { comp -> comp.interact(1) > 0 || comp.interact(option) > 0 }
+                        ?.also { logger.info("[Bank] emptyBox(name='{}'): interacted with component by id -> true", boxName) }
+                        ?.let { return true }
+                }
+
+                ComponentQuery.newQuery(INTERFACE_INDEX).option(option).results().firstOrNull()?.let { comp ->
+                    if (comp.interact(1) > 0 || comp.interact(option) > 0) {
+                        logger.info("[Bank] emptyBox(name='{}'): interacted with component by option -> true", boxName)
+                        return true
+                    }
+                }
+
+                var fuzzyOk = false
+                ComponentQuery.newQuery(INTERFACE_INDEX).results().forEach { comp ->
+                    comp.options?.forEach { op ->
+                        op?.lowercase()
+                            ?.takeIf { it.contains("empty") && (it.contains("log") || it.contains("nest") || it.contains("box")) }
+                            ?.takeIf { comp.interact(op) > 0 }
+                            ?.also {
+                                logger.info("[Bank] emptyBox(name='{}'): fuzzy component option '{}' -> true", boxName, op)
+                                fuzzyOk = true
+                                return@forEach
+                            }
+                    }
+                }
+                if (fuzzyOk) return true
+
+                bpItem?.interact(option)
+                logger.info("[Bank] emptyBox(name='{}'): fallback backpack interact -> {}", boxName, true)
+                true
+            }.onFailure { t ->
+                logger.warn("[Bank] emptyBox(name='{}') exception: {}", boxName, t.message)
+            }.getOrElse { false }
         }
     }
 }
