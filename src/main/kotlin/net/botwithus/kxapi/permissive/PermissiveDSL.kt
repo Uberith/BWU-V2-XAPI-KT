@@ -4,6 +4,7 @@ import net.botwithus.kxapi.permissive.dsl.StateBuilder
 import net.botwithus.xapi.script.BwuScript
 import net.botwithus.xapi.script.permissive.base.PermissiveScript
 import net.botwithus.xapi.script.permissive.node.Branch
+import org.slf4j.LoggerFactory
 
 /**
  * Base class for states that provides a clean DSL interface for building state trees.
@@ -25,15 +26,29 @@ abstract class PermissiveDSL<T : BwuScript>(
     name: String
 ) : PermissiveScript.State(name) {
 
+    private val logger = LoggerFactory.getLogger("${script.javaClass.simpleName}.$name")
+
     init {
         initializeNodes()
     }
 
     override fun initializeNodes() {
         val stateBuilder = StateBuilder(script)
-        stateBuilder.create()
-        node = stateBuilder.build() as Branch
-        script.println("$name State Initialized")
+        runCatching {
+            stateBuilder.create()
+            stateBuilder.build()
+        }.onSuccess { built ->
+            val branch = built as? Branch ?: run {
+                val actualType = built?.javaClass?.name
+                logger.error("State {} produced {} instead of Branch on {}", name, actualType, script.javaClass.simpleName)
+                throw IllegalStateException("State $name must return a Branch, but received $actualType")
+            }
+            node = branch
+            logger.debug("State {} initialised for {}", name, script.javaClass.simpleName)
+        }.onFailure { throwable ->
+            logger.error("Failed to initialize state {} on {}: {}", name, script.javaClass.simpleName, throwable.message ?: "unknown error", throwable)
+            throw throwable
+        }
     }
 
     protected abstract fun StateBuilder<T>.create()
