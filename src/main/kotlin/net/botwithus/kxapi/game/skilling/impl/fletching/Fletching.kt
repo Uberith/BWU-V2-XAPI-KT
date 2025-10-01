@@ -1,11 +1,13 @@
 package net.botwithus.kxapi.game.skilling.impl.fletching
 
+import net.botwithus.kxapi.game.inventory.Backpack
 import net.botwithus.kxapi.game.skilling.Skilling
 import net.botwithus.kxapi.game.skilling.production.ProductionResult
 import net.botwithus.kxapi.game.skilling.production.ProductionManager
 import net.botwithus.kxapi.game.skilling.production.ProductionMessage
 import net.botwithus.kxapi.game.skilling.skilling
 import net.botwithus.kxapi.script.SuspendableScript
+import net.botwithus.rs3.interfaces.Interfaces
 import org.slf4j.LoggerFactory
 
 /**
@@ -15,6 +17,70 @@ import org.slf4j.LoggerFactory
  * and wrappers that hand back a [ProductionManager] ready to interact with interface 1371.
  */
 class Fletching internal constructor(private val skilling: Skilling) {
+
+    suspend fun craft(
+        script: SuspendableScript,
+        product: FletchingProduct,
+        materialName: String = product.primaryMaterial ?: product.itemName,
+        onFinished: (Double) -> Unit = { _ -> },
+        onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
+    ): Boolean {
+        val normalizedMaterial = materialName.trim()
+        if (normalizedMaterial.isEmpty()) {
+            logger.warn("Cannot fletch {} because the material name resolved to an empty string", product.displayName)
+            return false
+        }
+        if (!Backpack.contains(normalizedMaterial)) {
+            logger.warn("Missing {} to fletch {}", normalizedMaterial, product.displayName)
+            return false
+        }
+
+        if (!Backpack.interact("Craft", normalizedMaterial)) {
+            logger.warn("Failed to interact with {} while preparing to fletch {}", normalizedMaterial, product.displayName)
+            return false
+        }
+
+        if (!script.awaitUntil(INTERFACE_OPEN_TIMEOUT_TICKS) { isFletchingInterfaceOpen() }) {
+            logger.warn(
+                "Fletching interface did not open after selecting {} for {}",
+                normalizedMaterial,
+                product.displayName
+            )
+            return false
+        }
+
+        val manager = produce(product)
+
+        var completed = false
+        var awardedXp = 0.0
+
+        while (isFletchingInterfaceOpen()) {
+            manager.produceItem(
+                onFinished = { xp ->
+                    completed = true
+                    awardedXp = xp
+                    onFinished(xp)
+                },
+                onProgress = onProgress
+            )
+
+            if (completed && !Interfaces.isOpen(PRODUCTION_INTERFACE)) {
+                break
+            }
+
+            script.awaitTicks(1)
+        }
+
+        if (!completed && awardedXp > 0.0) {
+            onFinished(awardedXp)
+        }
+
+        if (!completed) {
+            logger.debug("Fletching session for {} ended before completion", product.displayName)
+        }
+
+        return completed
+    }
 
     /**
      * Creates a production manager configured for the supplied [product] but does not start the interaction.
@@ -150,9 +216,18 @@ class Fletching internal constructor(private val skilling: Skilling) {
     fun materialsOf(product: FletchingProduct): Pair<String?, String?> =
         product.primaryMaterial to product.secondaryMaterial
 
+    private fun isFletchingInterfaceOpen(): Boolean =
+        Interfaces.isOpen(MAKE_X_INTERFACE) ||
+            Interfaces.isOpen(PRODUCTION_MENU_INTERFACE) ||
+            Interfaces.isOpen(PRODUCTION_INTERFACE)
+
     companion object {
         private val logger = LoggerFactory.getLogger(Fletching::class.java)
         private val PRODUCTS = FletchingProduct.entries.toList()
+        private const val MAKE_X_INTERFACE = 1370
+        private const val PRODUCTION_MENU_INTERFACE = 1371
+        private const val PRODUCTION_INTERFACE = 1251
+        private const val INTERFACE_OPEN_TIMEOUT_TICKS = 6
     }
 }
 
@@ -185,21 +260,57 @@ fun Skilling.fletch(
 /**
  * SuspendableScript-friendly overloads that retain the suspension semantics of other skilling helpers.
  */
-fun SuspendableScript.fletch(
+suspend fun SuspendableScript.fletch(
     product: FletchingProduct,
     onFinished: (Double) -> Unit = { _ -> },
     onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
-) = this.skilling.fletch(product, onFinished, onProgress)
+) {
+    skilling.fletching.craft(
+        this,
+        product,
+        product.primaryMaterial ?: product.itemName,
+        onFinished,
+        onProgress
+    )
+}
 
-fun SuspendableScript.fletch(
+suspend fun SuspendableScript.fletch(
     name: String,
     onFinished: (Double) -> Unit = { _ -> },
     onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
-) = this.skilling.fletch(name, onFinished, onProgress)
+) {
+    val product = skilling.fletching.resolveProduct(name)
+    if (product != null) {
+        skilling.fletching.craft(
+            this,
+            product,
+            product.primaryMaterial ?: product.itemName,
+            onFinished,
+            onProgress
+        )
+    } else {
+        skilling.fletching.produce(name, onFinished, onProgress)
+    }
+}
 
-fun SuspendableScript.fletch(
+suspend fun SuspendableScript.fletch(
     category: FletchingCategory,
     itemName: String,
     onFinished: (Double) -> Unit = { _ -> },
     onProgress: (ProductionMessage<ProductionResult>, Int, Int, Int, Double) -> Unit = { _, _, _, _, _ -> }
-) = this.skilling.fletching.produce(category, itemName).produceItem(onFinished, onProgress)
+) {
+    val product = FletchingProduct.entries.firstOrNull {
+        it.category == category && it.itemName.equals(itemName, ignoreCase = true)
+    }
+    if (product != null) {
+        skilling.fletching.craft(
+            this,
+            product,
+            product.primaryMaterial ?: product.itemName,
+            onFinished,
+            onProgress
+        )
+    } else {
+        skilling.fletching.produce(category, itemName).produceItem(onFinished, onProgress)
+    }
+}
